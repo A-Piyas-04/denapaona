@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { -webkit-tap-highlight-color: transparent; }
+body { @apply bg-slate-50 text-slate-900 antialiased; overflow-x: hidden; }
+/* Stories §12.5: the focused field scrolls into view above the keyboard. */
+input, textarea { scroll-margin-bottom: 7rem; }
