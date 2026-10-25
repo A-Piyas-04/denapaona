@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, Plus } from 'lucide-react';
 import { Chip } from './ui';
 import { LeaderBadge } from './LeaderBadge';
 
@@ -26,34 +27,40 @@ export function ParticipantPicker({ roster, others, selected, onChange, presets 
   const toggle = (id: string) => onChange(set.has(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   const same = (ids: string[]) => ids.length === set.size && ids.every((id) => set.has(id));
   const known = new Set(all.map((p) => p.id));
+  const shortcuts = presets.length > 0 || recent.length > 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <Chip selected={everyone} onClick={() => onChange(everyone ? [] : roster.map((p) => p.id))}>
-          {everyone ? '✓ ' : ''}Everyone
+          {everyone && <Check size={16} aria-hidden />}Everyone
         </Chip>
-        {presets.slice(0, 3).map((p) => {
-          const ids = p.userIds.filter((id) => known.has(id));
-          return <Chip key={p.id} selected={same(ids)} onClick={() => onChange(ids)}>{p.label}</Chip>;
-        })}
-        {recent.map((ids) => (
-          <Chip key={ids.join()} selected={same(ids)} onClick={() => onChange(ids)} className="max-w-full">
-            <span className="truncate">{ids.map(nameOf).join(', ')}</span>
-          </Chip>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
         {roster.map((p) => (
           <Chip key={p.id} selected={set.has(p.id)} onClick={() => toggle(p.id)}>
             {p.name}{p.isLeader && <span className="sr-only"> (leader)</span>}
           </Chip>
         ))}
       </div>
+      {shortcuts && (
+        <div>
+          <p className="mb-2 text-[13px] font-medium text-slate-500">Saved and recent</p>
+          <div className="flex flex-wrap gap-2">
+            {presets.slice(0, 3).map((p) => {
+              const ids = p.userIds.filter((id) => known.has(id));
+              return <Chip key={p.id} selected={same(ids)} onClick={() => onChange(ids)}>{p.label}</Chip>;
+            })}
+            {recent.map((ids) => (
+              <Chip key={ids.join()} selected={same(ids)} onClick={() => onChange(ids)} className="max-w-full">
+                <span className="truncate">{ids.map(nameOf).join(', ')}</span>
+              </Chip>
+            ))}
+          </div>
+        </div>
+      )}
       {others.length > 0 && (
         showOthers ? (
           <div>
-            <p className="mb-2 text-xs text-slate-500">Also in the group (not on the trip roster)</p>
+            <p className="mb-2 text-[13px] font-medium text-slate-500">Also in the group</p>
             <div className="flex flex-wrap gap-2">
               {others.map((p) => (
                 <Chip key={p.id} selected={set.has(p.id)} onClick={() => toggle(p.id)}>{p.name}</Chip>
@@ -61,8 +68,8 @@ export function ParticipantPicker({ roster, others, selected, onChange, presets 
             </div>
           </div>
         ) : (
-          <button type="button" className="text-sm font-medium text-brand" onClick={() => setShowOthers(true)}>
-            + someone not on the trip
+          <button type="button" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand" onClick={() => setShowOthers(true)}>
+            <Plus size={16} aria-hidden /> Someone not on the trip
           </button>
         )
       )}

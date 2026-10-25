@@ -4,17 +4,15 @@ import { ExpenseForm } from '@/components/ExpenseForm';
 import { Loadable } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useMembers } from '@/hooks/useGroups';
-import { useT } from '@/lib/i18n';
 
 /** Stories B-01, B-02, B-03 — a group expense outside any trip. */
 export function AddExpense() {
   const { id: groupId = '' } = useParams();
   const me = useMe();
-  const t = useT();
   const navigate = useNavigate();
   const members = useMembers(groupId);
   return (
-    <AppShell title={t('action.addExpense')} back={`/groups/${groupId}`}>
+    <AppShell title="New expense" back={`/groups/${groupId}`} nav={false}>
       <Loadable query={members}>
         {(list) => (
           <ExpenseForm

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth';
 import { I18nProvider } from './lib/i18n';
 import { ToastProvider } from './components/Toast';
+import { TourProvider } from './tour/TourProvider';
 import { App } from './App';
 import './index.css';
 
@@ -27,7 +28,9 @@ createRoot(document.getElementById('root')!).render(
         <I18nProvider>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              <TourProvider>
+                <App />
+              </TourProvider>
             </ToastProvider>
           </AuthProvider>
         </I18nProvider>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link2, Plus, Users } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
-import { Button, Card, Field, Input, Sheet } from '@/components/ui';
-import { EmptyState, Loadable } from '@/components/States';
-import { Balance } from '@/components/Money';
-import { useMyGroups } from '@/hooks/useGroups';
+import { Avatar, Button, Field, IconButton, Input, ListGroup, ListRow, Section, Sheet } from '@/components/ui';
+import { EmptyState, ListSkeleton, Loadable } from '@/components/States';
+import { Balance, Taka } from '@/components/Money';
+import { useMyGroups, type MyGroup } from '@/hooks/useGroups';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
 import { useT } from '@/lib/i18n';
@@ -19,39 +20,54 @@ export function Groups() {
 
   return (
     <AppShell title={t('groups.title')} action={
-      <Button size="sm" onClick={() => setCreating(true)}>+ {t('groups.new')}</Button>
+      <IconButton label={t('groups.new')} tone="brand" onClick={() => setCreating(true)} data-tour="new-group"><Plus size={22} /></IconButton>
     }>
-      <Loadable query={groups}>
+      <Loadable query={groups} skeleton={<ListSkeleton rows={3} />}>
         {(list) => list.length === 0 ? (
-          <EmptyState title={t('groups.empty.title')} body={t('groups.empty.body')}>
-            <Button onClick={() => setCreating(true)}>Create a group</Button>
-            <Button variant="outline" onClick={() => navigate('/join')}>{t('groups.haveInvite')}</Button>
+          <EmptyState icon={Users} title={t('groups.empty.title')} body={t('groups.empty.body')}>
+            <Button block onClick={() => setCreating(true)}>Create a group</Button>
+            <Button block variant="ghost" onClick={() => navigate('/join')}>{t('groups.haveInvite')}</Button>
           </EmptyState>
         ) : (
-          <ul className="space-y-2">
-            {list.map((g) => (
-              <li key={g.id}>
-                <Link to={`/groups/${g.id}`}>
-                  <Card className="flex items-center justify-between hover:border-slate-300">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-slate-900">{g.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {g.netPoisha > 0 ? "you're owed" : g.netPoisha < 0 ? 'you owe' : ' '}
-                      </p>
-                    </div>
-                    <Balance poisha={g.netPoisha} settledText={t('balance.allSettled')} />
-                  </Card>
-                </Link>
-              </li>
-            ))}
-            <li className="pt-2 text-center">
-              <Link to="/join" className="text-sm font-medium text-brand">{t('groups.haveInvite')}</Link>
-            </li>
-          </ul>
+          <>
+            {list.length >= 2 && <Summary list={list} />}
+            <Section title={t('groups.yours')}>
+              <ListGroup>
+                {list.map((g, i) => (
+                  <ListRow key={g.id} to={`/groups/${g.id}`} data-tour={i === 0 ? 'group-row' : undefined}
+                           leading={<Avatar name={g.name} seed={g.id} size={40} square />}
+                           title={g.name}
+                           subtitle={g.netPoisha > 0 ? "You're owed" : g.netPoisha < 0 ? 'You owe' : 'No balance'}
+                           trailing={<Balance poisha={g.netPoisha} settledText={t('balance.allSettled')} className="text-[15px]" />} />
+                ))}
+              </ListGroup>
+            </Section>
+            <Link to="/join" className="inline-flex items-center justify-center gap-2 self-center rounded-xl px-3 py-2 text-[15px] font-semibold text-brand hover:bg-brand-soft/60">
+              <Link2 size={18} aria-hidden /> {t('groups.haveInvite')}
+            </Link>
+          </>
         )}
       </Loadable>
       <CreateGroupSheet open={creating} onClose={() => setCreating(false)} />
     </AppShell>
+  );
+}
+
+function Summary({ list }: { list: MyGroup[] }) {
+  const t = useT();
+  const owed = list.reduce((s, g) => s + Math.max(0, g.netPoisha), 0);
+  const owe = list.reduce((s, g) => s + Math.max(0, -g.netPoisha), 0);
+  return (
+    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+      <div className="px-5 py-4">
+        <p className="text-[14px] font-medium text-slate-500">{t('balance.youreOwed')}</p>
+        <Taka poisha={owed} className="mt-1 block font-display text-[24px] font-semibold text-owed" />
+      </div>
+      <div className="border-l border-slate-100 px-5 py-4">
+        <p className="text-[14px] font-medium text-slate-500">{t('balance.youOwe')}</p>
+        <Taka poisha={owe} className="mt-1 block font-display text-[24px] font-semibold text-owe" />
+      </div>
+    </div>
   );
 }
 
@@ -82,14 +98,14 @@ function CreateGroupSheet({ open, onClose }: { open: boolean; onClose: () => voi
 
   return (
     <Sheet open={open} onClose={onClose} title="New group">
-      <form onSubmit={(e) => { e.preventDefault(); void create(); }} className="space-y-4">
+      <form onSubmit={(e) => { e.preventDefault(); void create(); }} className="space-y-5">
         <Field label="Group name" htmlFor="gname"
-               hint={!trimmed ? 'Give your group a name.' : name.length >= 50 ? `${name.length}/60` : undefined}
+               hint={name.length >= 50 ? `${name.length}/60` : 'You can invite people next.'}
                error={error}>
           <Input id="gname" autoFocus maxLength={60} placeholder="Hall 3 Friends" value={name}
                  onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Button type="submit" block busy={busy} disabled={!trimmed}>Create</Button>
+        <Button type="submit" block size="lg" busy={busy} disabled={!trimmed}>Create</Button>
       </form>
     </Sheet>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Chip, Field, Input, Segmented, Sheet } from './ui';
+import { Check, Users, Wallet } from 'lucide-react';
+import { Avatar, Button, Field, IconTile, Input, ListGroup, ListRow, Segmented, Sheet, StickyFooter } from './ui';
 import { ParticipantPicker, type Person } from './ParticipantPicker';
 import { Taka } from './Money';
 import { useToast } from './Toast';
@@ -82,6 +83,7 @@ export function ExpenseForm(props: ExpenseFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | { kind: 'large' } | { kind: 'duplicate'; text: string }>(null);
   const [offerPreset, setOfferPreset] = useState<string[] | null>(null);
+  const [sheet, setSheet] = useState<null | 'payer' | 'split'>(null);
 
   const people = useMemo(() => [...roster, ...others], [roster, others]);
   const nameOf = (id: string) => (id === me ? 'You' : people.find((p) => p.id === id)?.name ?? '?');
@@ -97,14 +99,16 @@ export function ExpenseForm(props: ExpenseFormProps) {
   const extraPoisha = total && draft.mode === 'equal' ? remainderRecipients(total, draft.participants) : new Set<string>();
   const othersCharged = [...shares].filter(([id, v]) => id !== draft.payerId && v > 0).length;
 
+  const splitProblem =
+    draft.participants.length === 0 ? 'Pick who shared this.'
+    : draft.mode === 'unequal' && total && assigned < total ? `${formatTaka(total - assigned)} still unassigned.`
+    : draft.mode === 'unequal' && total && assigned > total ? `${formatTaka(assigned - total)} over the total.`
+    : total && othersCharged === 0 ? 'An expense needs at least one other person.'
+    : null;
   const problem =
     !total ? 'Enter an amount.'
-    : draft.description.trim() === '' ? 'Add a description — an unlabelled expense can’t be checked later.'
-    : draft.participants.length === 0 ? 'Pick who shared this.'
-    : draft.mode === 'unequal' && assigned < total ? `${formatTaka(total - assigned)} still unassigned.`
-    : draft.mode === 'unequal' && assigned > total ? `${formatTaka(assigned - total)} over.`
-    : othersCharged === 0 ? 'An expense needs at least one other person.'
-    : null;
+    : draft.description.trim() === '' ? 'Add a description.'
+    : splitProblem;
 
   async function save(skip: { large?: boolean; duplicate?: boolean } = {}) {
     if (problem || !total) return;
@@ -119,7 +123,7 @@ export function ExpenseForm(props: ExpenseFormProps) {
           setBusy(false);
           setConfirm({
             kind: 'duplicate',
-            text: `A similar expense (“${similar.description}”, added by ${similar.created_by_name}) was added ${timeAgo(similar.created_at)} — add anyway?`,
+            text: `“${similar.description}” for the same amount was added by ${similar.created_by_name} ${timeAgo(similar.created_at)}.`,
           });
           return;
         }
@@ -129,7 +133,7 @@ export function ExpenseForm(props: ExpenseFormProps) {
         shares: [...shares].map(([user_id, share]) => ({ user_id, share })),
         clientToken: draft.clientToken,
       });
-      toast(`Saved — ${formatTaka(total)}`);
+      toast(`Expense saved: ${formatTaka(total)}`);
       clearDraft();
       void qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(groupId) || q.queryKey[0] === 'groups' || q.queryKey[0] === 'tripNets' });
       if (tripId && maybeOfferPreset(tripId, draft.participants, roster.length, presets)) {
@@ -149,127 +153,163 @@ export function ExpenseForm(props: ExpenseFormProps) {
   }
   const pendingSaved = useRef<string | null>(null);
 
+  const everyone = roster.length > 0 && roster.every((p) => draft.participants.includes(p.id)) && draft.participants.length === roster.length;
+  const splitWho = draft.participants.length === 0 ? 'Nobody yet'
+    : everyone ? (roster.length === 2 ? `You and ${nameOf(roster.find((p) => p.id !== me)?.id ?? '')}` : `Everyone (${roster.length})`)
+    : draft.participants.length <= 3 ? draft.participants.map(nameOf).join(', ')
+    : `${draft.participants.length} people`;
+  const each = total && draft.mode === 'equal' && draft.participants.length > 0
+    ? Math.floor(total / draft.participants.length) : null;
+  const splitSummary = draft.mode === 'equal'
+    ? `Equally${each !== null ? `, ${formatTaka(each)} each` : ''}`
+    : 'Unequally';
+  const payerOptions = people.filter((p) => p.id === me || roster.some((r) => r.id === p.id) || p.id === draft.payerId)
+    .sort((a, b) => (a.id === me ? -1 : b.id === me ? 1 : 0));
+
   return (
-    <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form className="flex flex-1 flex-col gap-6" onSubmit={(e) => { e.preventDefault(); void save(); }}>
       {runningTotal !== undefined && (
-        <p className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
-          Trip so far: <Taka poisha={runningTotal} className="font-semibold text-slate-900" />
-          {total ? <> → <Taka poisha={runningTotal + total} className="font-semibold text-slate-900" /></> : null}
+        <p className="-mb-2 text-center text-[14px] text-slate-500">
+          Trip so far <Taka poisha={runningTotal} className="font-semibold text-slate-800" />
+          {total ? <> then <Taka poisha={runningTotal + total} className="font-semibold text-slate-800" /></> : null}
         </p>
       )}
 
-      <Field label="Amount (৳)" htmlFor="amount">
-        <Input
-          id="amount" ref={amountRef} autoFocus inputMode="decimal" autoComplete="off" placeholder="0"
-          className="h-14 text-2xl font-semibold tabular-nums"
-          value={draft.amount}
-          onChange={(e) => isPartialTakaInput(e.target.value) && set({ amount: e.target.value })}
-        />
-      </Field>
-      {total !== null && total > SANITY_BOUND_POISHA && (
-        <p className="-mt-3 text-sm text-amber-700">That looks unusually large — check the amount.</p>
-      )}
-
-      <Field label="What was it?" htmlFor="desc">
-        <Input id="desc" maxLength={200} placeholder="Auto rickshaw, dinner, tickets…" value={draft.description}
-               onChange={(e) => set({ description: e.target.value })} enterKeyHint="done" />
-      </Field>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">Paid by</p>
-        <div className="flex flex-wrap gap-2">
-          {people.filter((p) => p.id === me || roster.some((r) => r.id === p.id) || p.id === draft.payerId)
-            .sort((a, b) => (a.id === me ? -1 : b.id === me ? 1 : 0))
-            .map((p) => (
-              <Chip key={p.id} selected={draft.payerId === p.id} onClick={() => set({ payerId: p.id })}>
-                {p.id === me ? 'You' : p.name}
-              </Chip>
-            ))}
+      <div className="rounded-3xl border border-slate-200/80 bg-white px-5 pb-5 pt-6">
+        <Field label="Amount (৳)" htmlFor="amount" srLabel
+               error={draft.amount !== '' && total === null ? 'Enter a valid amount.' : undefined}
+               hint={total !== null && total > SANITY_BOUND_POISHA ? 'That looks unusually large. Check the amount.' : undefined}>
+          <div className="flex items-baseline justify-center gap-1.5">
+            <span className="font-display text-[30px] font-semibold text-slate-400" aria-hidden>৳</span>
+            <input
+              id="amount" ref={amountRef} autoFocus inputMode="decimal" autoComplete="off" placeholder="0"
+              className="w-full min-w-0 max-w-[14rem] bg-transparent text-center font-display text-[44px] font-semibold leading-tight text-slate-900 tnum placeholder:text-slate-300 focus:outline-none"
+              value={draft.amount}
+              onChange={(e) => isPartialTakaInput(e.target.value) && set({ amount: e.target.value })}
+            />
+          </div>
+        </Field>
+        <div className="mt-4">
+          <Field label="What was it?" htmlFor="desc" srLabel
+                 hint={total && draft.description.trim() === '' ? 'Add a description so it can be checked later.' : undefined}>
+            <Input id="desc" maxLength={200} placeholder="What was it? Dinner, rickshaw, tickets…" value={draft.description}
+                   className="text-center" onChange={(e) => set({ description: e.target.value })} enterKeyHint="done" />
+          </Field>
         </div>
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">Split between</p>
-        <ParticipantPicker
-          roster={roster} others={others} selected={draft.participants}
-          onChange={(ids) => set({ participants: ids })}
-          presets={presets.map((p) => ({ id: p.id, label: p.label, userIds: p.user_ids }))}
-          recent={recentSets}
-        />
+        <ListGroup>
+          <ListRow onClick={() => setSheet('payer')} chevron
+                   leading={<Avatar name={nameOf(draft.payerId)} seed={draft.payerId} />}
+                   title={<><span className="font-normal text-slate-500">Paid by </span>{nameOf(draft.payerId)}</>}
+                   aria-label={`Paid by ${nameOf(draft.payerId)}. Change`} />
+          <ListRow onClick={() => setSheet('split')} chevron data-tour="split-row"
+                   leading={<IconTile tone="brand"><Users size={20} /></IconTile>}
+                   title={<><span className="font-normal text-slate-500">Split </span>{splitWho}</>}
+                   subtitle={splitSummary}
+                   aria-label={`Split between ${splitWho}, ${splitSummary}. Change`} />
+        </ListGroup>
+        {total && splitProblem ? <p className="px-1 text-[13px] text-owe" role="alert">{splitProblem}</p> : null}
+        {total && !draft.participants.includes(draft.payerId) && othersCharged > 0 ? (
+          <p className="px-1 text-[13px] text-slate-500">{nameOf(draft.payerId)} paid but isn’t in the split, so they’re owed the whole amount.</p>
+        ) : null}
       </div>
 
-      <Segmented label="How to split" value={draft.mode} onChange={(mode) => set({ mode })}
-                 options={[{ value: 'equal', label: 'Equally' }, { value: 'unequal', label: 'Unequally' }]} />
+      {error && <p className="rounded-2xl bg-owe-soft px-4 py-3 text-[15px] text-owe" role="alert">Couldn’t save. {error}</p>}
 
-      {total ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          {draft.mode === 'unequal' && (
-            <div className={cn('mb-2 flex items-center justify-between rounded-lg px-2 py-1.5 text-sm',
-              assigned === total ? 'bg-owed-soft text-owed' : 'bg-amber-50 text-amber-800')}>
-              <span>{formatTaka(assigned)} of {formatTaka(total)} assigned</span>
-              {assigned < total && (
-                <button type="button" className="font-medium underline"
-                  onClick={() => {
-                    const next = splitRemainder(total, shares, draft.participants);
-                    set({ custom: Object.fromEntries([...next].map(([k, v]) => [k, poishaToInput(v)])) });
-                  }}>
-                  Split the rest evenly
-                </button>
+      <StickyFooter>
+        <Button type="submit" size="lg" block busy={busy} disabled={!!problem} className="h-14 rounded-2xl text-[16px]">
+          {total ? `Save ${formatTaka(total)}` : 'Save'}
+        </Button>
+      </StickyFooter>
+
+      <Sheet open={sheet === 'payer'} onClose={() => setSheet(null)} title="Who paid?">
+        <ListGroup className="-mx-1">
+          {payerOptions.map((p) => (
+            <ListRow key={p.id} onClick={() => { set({ payerId: p.id }); setSheet(null); }}
+                     leading={<Avatar name={p.name} seed={p.id} />} title={p.id === me ? 'You' : p.name}
+                     trailing={draft.payerId === p.id ? <Check size={20} className="text-brand" aria-label="Selected" /> : undefined} />
+          ))}
+        </ListGroup>
+      </Sheet>
+
+      <Sheet open={sheet === 'split'} onClose={() => setSheet(null)} title="Split between"
+             footer={<Button block size="lg" onClick={() => setSheet(null)}>Done</Button>}>
+        <div className="space-y-5">
+          <ParticipantPicker
+            roster={roster} others={others} selected={draft.participants}
+            onChange={(ids) => set({ participants: ids })}
+            presets={presets.map((p) => ({ id: p.id, label: p.label, userIds: p.user_ids }))}
+            recent={recentSets}
+          />
+          <Segmented label="How to split" value={draft.mode} onChange={(mode) => set({ mode })}
+                     options={[{ value: 'equal', label: 'Equally' }, { value: 'unequal', label: 'Unequally' }]} />
+          {total ? (
+            <div className="rounded-2xl border border-slate-200/80">
+              {draft.mode === 'unequal' && (
+                <div className={cn('flex items-center justify-between gap-2 rounded-t-2xl px-4 py-2.5 text-[14px]',
+                  assigned === total ? 'bg-owed-soft text-owed' : 'bg-pending-soft text-pending')}>
+                  <span className="tnum">{formatTaka(assigned)} of {formatTaka(total)}</span>
+                  {assigned < total && (
+                    <button type="button" className="font-semibold underline underline-offset-2"
+                      onClick={() => {
+                        const next = splitRemainder(total, shares, draft.participants);
+                        set({ custom: Object.fromEntries([...next].map(([k, v]) => [k, poishaToInput(v)])) });
+                      }}>
+                      Split the rest evenly
+                    </button>
+                  )}
+                </div>
+              )}
+              <ul className="divide-y divide-slate-100 px-4">
+                {draft.participants.map((id) => (
+                  <li key={id} className="flex min-h-[48px] items-center justify-between gap-3 py-1.5 text-[15px]">
+                    <span className="flex min-w-0 items-center gap-2.5 text-slate-800">
+                      <Avatar name={nameOf(id)} seed={id} size={28} /><span className="truncate">{nameOf(id)}</span>
+                    </span>
+                    {draft.mode === 'equal' ? (
+                      <span className="text-slate-900 tnum">
+                        {formatTaka(shares.get(id) ?? 0)}
+                        {extraPoisha.has(id) && <span className="ml-1 text-xs text-slate-500" title="Remainder poisha are assigned in a fixed order">+1 poisha</span>}
+                      </span>
+                    ) : (
+                      <Input inputMode="decimal" className="h-10 w-28 text-right tnum" placeholder="0"
+                             aria-label={`Share for ${nameOf(id)}`} value={draft.custom[id] ?? ''}
+                             onChange={(e) => isPartialTakaInput(e.target.value) &&
+                               set({ custom: { ...draft.custom, [id]: e.target.value } })} />
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {extraPoisha.size > 0 && (
+                <p className="border-t border-slate-100 px-4 py-2.5 text-[13px] text-slate-500">
+                  Leftover poisha go to people in a fixed order, not at random.
+                </p>
               )}
             </div>
-          )}
-          <ul className="divide-y divide-slate-100">
-            {draft.participants.map((id) => (
-              <li key={id} className="flex items-center justify-between gap-3 py-1.5 text-[15px]">
-                <span className="text-slate-700">{nameOf(id)}</span>
-                {draft.mode === 'equal' ? (
-                  <span className="tabular-nums text-slate-900">
-                    {formatTaka(shares.get(id) ?? 0)}
-                    {extraPoisha.has(id) && <span className="ml-1 text-xs text-slate-500" title="Remainder poisha are assigned in a fixed order">+1 poisha</span>}
-                  </span>
-                ) : (
-                  <Input inputMode="decimal" className="h-9 w-28 text-right tabular-nums" placeholder="0"
-                         aria-label={`Share for ${nameOf(id)}`} value={draft.custom[id] ?? ''}
-                         onChange={(e) => isPartialTakaInput(e.target.value) &&
-                           set({ custom: { ...draft.custom, [id]: e.target.value } })} />
-                )}
-              </li>
-            ))}
-          </ul>
-          {extraPoisha.size > 0 && (
-            <p className="mt-2 text-xs text-slate-500">
-              {formatTaka(total)} doesn’t divide evenly by {draft.participants.length}. The leftover poisha go to
-              people in a fixed, repeatable order — not at random.
-            </p>
-          )}
-          {!draft.participants.includes(draft.payerId) && othersCharged > 0 && (
-            <p className="mt-2 text-xs text-slate-500">{nameOf(draft.payerId)} paid but isn’t in the split, so they’re owed the whole amount.</p>
+          ) : (
+            <p className="flex items-center gap-2 text-[14px] text-slate-500"><Wallet size={16} aria-hidden /> Enter an amount to see each share.</p>
           )}
         </div>
-      ) : null}
-
-      {error && <p className="rounded-xl bg-owe-soft px-3 py-2 text-sm text-owe" role="alert">Couldn’t save. {error}</p>}
-
-      <div className="sticky bottom-20 z-10 -mx-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent px-4 pb-2 pt-4">
-        <Button type="submit" size="lg" block busy={busy} disabled={!!problem}>
-          {problem && total ? problem : total ? `Save ${formatTaka(total)}` : 'Enter an amount'}
-        </Button>
-      </div>
+      </Sheet>
 
       <Sheet open={!!confirm} onClose={() => setConfirm(null)}
-             title={confirm?.kind === 'large' ? 'Check the amount' : 'Possible duplicate'}>
+             title={confirm?.kind === 'large' ? 'Check the amount' : 'Possible duplicate'}
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => { setConfirm(null); amountRef.current?.focus(); }}>Go back</Button>
+                 <Button onClick={() => {
+                   const c = confirm; setConfirm(null);
+                   void save(c?.kind === 'large' ? { large: true } : { large: true, duplicate: true });
+                 }}>Add anyway</Button>
+               </div>
+             }>
         <p className="text-[15px] text-slate-700">
           {confirm?.kind === 'large'
-            ? `${formatTaka(total ?? 0)} looks unusually large — is that right?`
+            ? `${formatTaka(total ?? 0)} looks unusually large. Is that right?`
             : confirm?.kind === 'duplicate' ? confirm.text : ''}
         </p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => { setConfirm(null); amountRef.current?.focus(); }}>Go back</Button>
-          <Button onClick={() => {
-            const c = confirm; setConfirm(null);
-            void save(c?.kind === 'large' ? { large: true } : { large: true, duplicate: true });
-          }}>Add anyway</Button>
-        </div>
       </Sheet>
 
       <SavePresetSheet
@@ -307,21 +347,25 @@ function SavePresetSheet({ ids, tripId, nameOf, onDone }: {
   const qc = useQueryClient();
   if (!ids || !tripId) return null;
   return (
-    <Sheet open onClose={onDone} title="Save this group of people?">
-      <p className="mb-3 text-sm text-slate-600">{ids.map(nameOf).join(', ')} — you’ve used this set twice.</p>
-      <Input placeholder="e.g. Fort group" maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} />
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button variant="secondary" onClick={onDone}>Not now</Button>
-        <Button busy={busy} disabled={!label.trim()} onClick={async () => {
-          setBusy(true);
-          // Presets carry no financial effect, so RLS permits a direct insert (§12.4).
-          const { error } = await supabase.from('trip_presets').insert({ trip_id: tripId, label: label.trim(), user_ids: ids });
-          setBusy(false);
-          if (error) toast(errorMessage(error), 'error');
-          else { toast('Preset saved'); void qc.invalidateQueries({ queryKey: ['trip', tripId] }); }
-          onDone();
-        }}>Save</Button>
-      </div>
+    <Sheet open onClose={onDone} title="Save this group of people?"
+           footer={
+             <div className="grid grid-cols-2 gap-2">
+               <Button variant="secondary" onClick={onDone}>Not now</Button>
+               <Button busy={busy} disabled={!label.trim()} onClick={async () => {
+                 setBusy(true);
+                 // Presets carry no financial effect, so RLS permits a direct insert (§12.4).
+                 const { error } = await supabase.from('trip_presets').insert({ trip_id: tripId, label: label.trim(), user_ids: ids });
+                 setBusy(false);
+                 if (error) toast(errorMessage(error), 'error');
+                 else { toast('Preset saved'); void qc.invalidateQueries({ queryKey: ['trip', tripId] }); }
+                 onDone();
+               }}>Save</Button>
+             </div>
+           }>
+      <p className="mb-3 text-[15px] text-slate-600">You’ve split with {ids.map(nameOf).join(', ')} twice.</p>
+      <Field label="Name" htmlFor="preset-label">
+        <Input id="preset-label" placeholder="e.g. Fort group" maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} />
+      </Field>
     </Sheet>
   );
 }

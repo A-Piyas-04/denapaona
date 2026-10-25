@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Chip, Field, Input, Textarea } from './ui';
+import { ArrowLeftRight, Plus } from 'lucide-react';
+import { Button, Chip, Field, Input, Section, StickyFooter, Textarea } from './ui';
+import { DebtDiagram } from './DebtDiagram';
 import { EmptyState } from './States';
 import { useToast } from './Toast';
 import { rpc } from '@/lib/rpc';
@@ -28,10 +30,11 @@ export function TransferBuilder({ groupId, me, people, owes }: {
   const [creditor, setCreditor] = useState(creditors.find((c) => c.id !== debtors[0]?.id)?.id ?? '');
   const [amountStr, setAmountStr] = useState('');
   const [note, setNote] = useState('');
+  const [showNote, setShowNote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const name = (id: string) => people.find((p) => p.id === id)?.name ?? '?';
+  const name = (id: string) => (id === me ? 'You' : people.find((p) => p.id === id)?.name ?? '?');
   const leg1 = debtor ? owes(debtor, me) : 0;
   const leg2 = creditor ? owes(me, creditor) : 0;
   const max = Math.max(0, Math.min(leg1, leg2));
@@ -46,24 +49,17 @@ export function TransferBuilder({ groupId, me, people, owes }: {
 
   if (debtors.length === 0 || creditors.length === 0) {
     return (
-      <EmptyState
-        title="No transfer possible right now"
-        body="A transfer needs someone who owes you and someone you owe. Then you can ask them both to deal with each other directly — and both must agree."
-      />
+      <EmptyState icon={ArrowLeftRight} title="No transfer possible right now"
+                  body="You need someone who owes you and someone you owe." />
     );
   }
-
-  const line = (who: string, whom: string, v: number) =>
-    v > 0 ? `${who} owe${who === 'You' ? '' : 's'} ${whom} ${formatTaka(v)}`
-    : v < 0 ? `${whom} owe${whom === 'you' ? '' : 's'} ${who === 'You' ? 'you' : who} ${formatTaka(-v)}`
-    : `${who} and ${whom} are square`;
 
   async function send() {
     if (!valid) return;
     setBusy(true); setError(null);
     try {
       const id = await rpc.proposeTransfer({ groupId, debtor, intermediary: me, creditor, amount, note: note.trim() });
-      toast(`Sent to ${name(debtor)} and ${name(creditor)} for approval`);
+      toast(`Sent for approval to ${name(debtor)} and ${name(creditor)}`);
       void qc.invalidateQueries({ queryKey: ['sent'] });
       navigate(`/proposals/${id}`, { replace: true });
     } catch (e) {
@@ -74,65 +70,73 @@ export function TransferBuilder({ groupId, me, people, owes }: {
     }
   }
 
+  const ready = debtor && creditor && debtor !== creditor;
+
   return (
-    <div className="space-y-5">
-      <Field label="Who owes you?">
+    <div className="flex flex-1 flex-col gap-6">
+      <Section title="Who owes you?">
         <div className="flex flex-wrap gap-2">
           {debtors.map((p) => (
             <Chip key={p.id} selected={debtor === p.id} onClick={() => setDebtor(p.id)}>
-              {p.name} · {formatTaka(owes(p.id, me))}
+              {p.name} <span className="opacity-75 tnum">{formatTaka(owes(p.id, me))}</span>
             </Chip>
           ))}
         </div>
-      </Field>
-      <Field label="Who do you owe?" hint="They would collect from the first person instead of you.">
+      </Section>
+      <Section title="Who do you owe?">
         <div className="flex flex-wrap gap-2">
           {creditors.map((p) => (
             <Chip key={p.id} selected={creditor === p.id} disabled={p.id === debtor} onClick={() => setCreditor(p.id)}>
-              {p.name} · {formatTaka(owes(me, p.id))}
+              {p.name} <span className="opacity-75 tnum">{formatTaka(owes(me, p.id))}</span>
             </Chip>
           ))}
         </div>
-      </Field>
+      </Section>
 
-      {debtor && creditor && debtor !== creditor && (
+      {ready && (
         <>
-          <Field label="Amount" hint={`At most ${formatTaka(max)} — the smaller of the two debts.`}>
-            <div className="space-y-2">
+          <Field label="Amount" htmlFor="transfer-amount" hint={`Up to ${formatTaka(max)}, the smaller of the two debts.`}>
+            <div className="space-y-3">
+              <Input id="transfer-amount" inputMode="decimal" className="text-[18px] font-semibold tnum"
+                     value={amountStr === '' ? poishaToInput(max) : amountStr}
+                     onChange={(e) => isPartialTakaInput(e.target.value) && setAmountStr(e.target.value)} />
               <input type="range" min={1} max={Math.max(max, 1)} step={1} value={Math.min(amount || max, max)}
                      aria-label="Transfer amount" className="w-full accent-brand"
                      onChange={(e) => setAmountStr(poishaToInput(Number(e.target.value)))} />
-              <Input inputMode="decimal" value={amountStr === '' ? poishaToInput(max) : amountStr}
-                     onChange={(e) => isPartialTakaInput(e.target.value) && setAmountStr(e.target.value)} />
             </div>
           </Field>
 
-          <Card className="space-y-3 bg-slate-50">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Right now</p>
-              <p className="text-[15px] text-slate-800">{line(name(debtor), 'you', leg1)}.</p>
-              <p className="text-[15px] text-slate-800">{line('You', name(creditor), leg2)}.</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand">After, if all three agree</p>
-              <p className="text-[15px] font-medium text-slate-900">{line(name(debtor), name(creditor), after.debtorToCreditor)}.</p>
-              <p className="text-[15px] text-slate-800">{line(name(debtor), 'you', after.debtorToMe)}.</p>
-              <p className="text-[15px] text-slate-800">{line('You', name(creditor), after.meToCreditor)}.</p>
-            </div>
-            <p className="text-xs text-slate-500">
-              {name(debtor)} and {name(creditor)} must both approve. Either can say no, and nothing changes.
-            </p>
-          </Card>
+          <DebtDiagram
+            name={name}
+            beforeLabel="Right now"
+            afterLabel="After, if all three agree"
+            before={[{ a: debtor, b: me, v: leg1 }, { a: me, b: creditor, v: leg2 }]}
+            after={[
+              { a: debtor, b: creditor, v: after.debtorToCreditor },
+              { a: debtor, b: me, v: after.debtorToMe },
+              { a: me, b: creditor, v: after.meToCreditor },
+            ]}
+            highlight={0}
+          />
 
-          <Field label="Note (optional)" htmlFor="transfer-note">
-            <Textarea id="transfer-note" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
-                      placeholder="e.g. Saves us a payment each" />
-          </Field>
+          {showNote ? (
+            <Field label="Note (optional)" htmlFor="transfer-note">
+              <Textarea id="transfer-note" autoFocus maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
+                        placeholder="e.g. Saves us a payment each" />
+            </Field>
+          ) : (
+            <button type="button" className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-brand" onClick={() => setShowNote(true)}>
+              <Plus size={16} aria-hidden /> Add a note
+            </button>
+          )}
         </>
       )}
 
-      {error && <p className="rounded-xl bg-owe-soft px-3 py-2 text-sm text-owe" role="alert">{error}</p>}
-      <Button size="lg" block busy={busy} disabled={!valid} onClick={send}>Send for approval</Button>
+      {error && <p className="rounded-2xl bg-owe-soft px-4 py-3 text-[15px] text-owe" role="alert">{error}</p>}
+      <StickyFooter>
+        <Button size="lg" block busy={busy} disabled={!valid} onClick={send} className="h-14 rounded-2xl text-[16px]">Send for approval</Button>
+        {ready && <p className="mt-2 text-center text-[13px] text-slate-500">{name(debtor)} and {name(creditor)} must both approve.</p>}
+      </StickyFooter>
     </div>
   );
 }

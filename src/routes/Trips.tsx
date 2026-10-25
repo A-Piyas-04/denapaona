@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppShell, SectionTitle } from '@/components/AppShell';
-import { Badge, Button, Card, Chip, Field, Input, Segmented, Sheet } from '@/components/ui';
+import { Map as MapIcon, Plus } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { Badge, Button, Chip, Field, IconTile, Input, ListGroup, ListRow, Section, Segmented, Sheet } from '@/components/ui';
 import { EmptyState, Loadable } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useMembers } from '@/hooks/useGroups';
@@ -18,12 +19,13 @@ export function Trips() {
   const trips = useTrips(groupId);
   const [creating, setCreating] = useState(false);
   return (
-    <AppShell title="Trips" back={`/groups/${groupId}`} action={<Button size="sm" onClick={() => setCreating(true)}>+ New trip</Button>}>
+    <AppShell title="Trips" back={`/groups/${groupId}`} action={
+      <Button size="sm" onClick={() => setCreating(true)}><Plus size={17} aria-hidden /> New trip</Button>
+    }>
       <Loadable query={trips}>
         {(list) => list.length === 0 ? (
-          <EmptyState title="No trips yet"
-            body="A trip groups a burst of shared spending — a tour, a weekend away. Two or three leaders record everything on the spot; nobody needs to approve each rickshaw fare.">
-            <Button onClick={() => setCreating(true)}>Start a trip</Button>
+          <EmptyState icon={MapIcon} title="No trips yet" body="A trip groups a burst of spending. Leaders record it on the spot.">
+            <Button block onClick={() => setCreating(true)}>Start a trip</Button>
           </EmptyState>
         ) : (
           <>
@@ -31,24 +33,17 @@ export function Trips() {
               const rows = list.filter((t) => t.status === status);
               if (rows.length === 0) return null;
               return (
-                <div key={status}>
-                  <SectionTitle>{status === 'active' ? 'Active' : 'Closed'}</SectionTitle>
-                  <div className="space-y-2">
+                <Section key={status} title={status === 'active' ? 'Active' : 'Closed'}>
+                  <ListGroup>
                     {rows.map((t) => (
-                      <Link key={t.id} to={`/trips/${t.id}`}>
-                        <Card className="flex items-center justify-between hover:border-slate-300">
-                          <div>
-                            <p className="font-medium">{t.name}</p>
-                            <p className="text-xs text-slate-500">
-                              {shortDate(t.started_on)}{t.ended_on && ` – ${shortDate(t.ended_on)}`}
-                            </p>
-                          </div>
-                          <Badge tone={status === 'active' ? 'brand' : 'slate'}>{status}</Badge>
-                        </Card>
-                      </Link>
+                      <ListRow key={t.id} to={`/trips/${t.id}`}
+                               leading={<IconTile tone={status === 'active' ? 'brand' : 'slate'}><MapIcon size={20} /></IconTile>}
+                               title={t.name}
+                               subtitle={`${shortDate(t.started_on)}${t.ended_on ? ` to ${shortDate(t.ended_on)}` : ', ongoing'}`}
+                               trailing={status === 'active' ? <Badge tone="brand">Active</Badge> : undefined} />
                     ))}
-                  </div>
-                </div>
+                  </ListGroup>
+                </Section>
               );
             })}
           </>
@@ -89,12 +84,17 @@ function CreateTripSheet({ groupId, open, onClose }: { groupId: string; open: bo
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="New trip">
-      <div className="space-y-5">
-        <Field label="Trip name" htmlFor="trip-name">
+    <Sheet open={open} onClose={onClose} title="New trip"
+           footer={
+             <Button block size="lg" busy={busy} disabled={!name.trim() || rosterSize < 2} onClick={create}>
+               {rosterSize < 2 ? 'Add at least two people' : 'Start trip'}
+             </Button>
+           }>
+      <div className="space-y-6">
+        <Field label="Trip name" htmlFor="trip-name" error={error}>
           <Input id="trip-name" autoFocus maxLength={60} placeholder="Sylhet Tour" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Who’s going?" hint="The default for each expense. Anyone in the group can still be added later.">
+        <Field label="Who’s going?" hint="Anyone in the group can still be added later.">
           <div className="flex flex-wrap gap-2">
             {all.map((id) => (
               <Chip key={id} selected={chosen.includes(id) || id === me} disabled={id === me}
@@ -102,10 +102,9 @@ function CreateTripSheet({ groupId, open, onClose }: { groupId: string; open: bo
             ))}
           </div>
         </Field>
-        <Field label="Co-leaders (you’re one automatically)"
-               hint={leaders.length === 0
-                 ? 'If only you can record, nothing gets recorded while you’re busy. Consider a second leader.'
-                 : leaders.length >= 3 ? 'Every leader can change balances without approval. Keep this to people the group trusts.' : undefined}>
+        <Field label="Co-leaders (you’re one already)"
+               hint={leaders.length === 0 ? 'A second leader helps when you’re busy.'
+                 : leaders.length >= 3 ? 'Leaders change balances without approval. Pick people you trust.' : undefined}>
           <div className="flex flex-wrap gap-2">
             {all.filter((id) => id !== me).map((id) => (
               <Chip key={id} selected={leaders.includes(id)} onClick={() => setLeaders(toggle(leaders, id))}>{nameOf(id)}</Chip>
@@ -116,10 +115,6 @@ function CreateTripSheet({ groupId, open, onClose }: { groupId: string; open: bo
           <Segmented label="Entry mode" value={mode} onChange={setMode}
                      options={[{ value: 'leaders_only', label: 'Leaders only' }, { value: 'open', label: 'Anyone on the trip' }]} />
         </Field>
-        {error && <p className="text-sm text-owe">{error}</p>}
-        <Button block size="lg" busy={busy} disabled={!name.trim() || rosterSize < 2} onClick={create}>
-          {rosterSize < 2 ? 'Add at least two people' : 'Start trip'}
-        </Button>
       </div>
     </Sheet>
   );

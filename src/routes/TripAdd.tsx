@@ -1,7 +1,9 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Users } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { ExpenseForm } from '@/components/ExpenseForm';
-import { ErrorState, ListSkeleton } from '@/components/States';
+import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
+import { ButtonLink } from '@/components/ui';
 import { useTripView } from '@/hooks/useTripView';
 import { useExpense } from '@/hooks/useGroupLedger';
 
@@ -18,30 +20,31 @@ export function TripAdd() {
   const prefill = useExpense(fromId ?? '');
 
   if (v.trip.isLoading || v.members.isLoading || (fromId && prefill.isLoading)) {
-    return <AppShell title="Add expense" back={`/trips/${tripId}`}><ListSkeleton /></AppShell>;
+    return <AppShell title="New expense" back={`/trips/${tripId}`} nav={false}><ListSkeleton /></AppShell>;
   }
-  if (v.trip.error || !v.trip.data) return <AppShell title="Add expense" back><ErrorState error={v.trip.error} /></AppShell>;
+  if (v.trip.error || !v.trip.data) return <AppShell title="New expense" back nav={false}><ErrorState error={v.trip.error} /></AppShell>;
   const { trip, leaders } = v.trip.data;
 
   if (trip.status !== 'active') {
     return (
-      <AppShell title="Add expense" back={`/trips/${tripId}`}>
+      <AppShell title="New expense" back={`/trips/${tripId}`} nav={false}>
         <ErrorState error={new Error('TRIP_CLOSED')} />
       </AppShell>
     );
   }
   if (trip.entry_mode === 'leaders_only' && !v.isLeader) {
     return (
-      <AppShell title="Add expense" back={`/trips/${tripId}`}>
-        <p className="rounded-2xl bg-amber-50 p-4 text-[15px] text-amber-900 ring-1 ring-amber-200">
-          On this trip only the leaders record expenses. Ask {leaders.map((l) => v.name(l.user_id)).join(' or ')}.
-        </p>
+      <AppShell title="New expense" back={`/trips/${tripId}`} nav={false}>
+        <EmptyState icon={Users} title="Only leaders add expenses on this trip"
+                    body={`Ask ${leaders.map((l) => v.name(l.user_id)).join(' or ')}.`}>
+          <ButtonLink to={`/trips/${tripId}`} variant="secondary" block>Back to trip</ButtonLink>
+        </EmptyState>
       </AppShell>
     );
   }
 
   return (
-    <AppShell title={fromId ? 'Re-enter the corrected expense' : trip.name} back={`/trips/${tripId}`}>
+    <AppShell title={fromId ? 'Re-enter the expense' : `New expense, ${trip.name}`} back={`/trips/${tripId}`} nav={false}>
       <ExpenseForm
         groupId={trip.group_id}
         me={v.me}

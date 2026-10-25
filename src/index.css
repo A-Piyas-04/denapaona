@@ -54,5 +54,6 @@
 .driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: white; }
 .driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: white; }
 .driver-popover.hn-tour .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: white; }
+.hn-tour-progress { @apply mb-1 text-[12px] font-semibold text-brand; }
 .hn-tour-skip { @apply mr-auto text-sm font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline; }
 .hn-tour-hint { @apply mt-2 flex items-center gap-1.5 text-[13px] font-medium text-brand; }

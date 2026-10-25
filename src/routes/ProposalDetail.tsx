@@ -1,9 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppShell, SectionTitle } from '@/components/AppShell';
-import { Badge, Button, Card, Sheet } from '@/components/ui';
-import { ErrorState, ListSkeleton } from '@/components/States';
+import { CheckCircle2, Clock, Info, XCircle } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { DebtDiagram, type DebtEdge } from '@/components/DebtDiagram';
+import { ApprovalDots, PROPOSAL_TYPE } from '@/components/ProposalCard';
+import { Avatar, Badge, Button, IconTile, ListGroup, ListRow, Section, Sheet, StickyFooter } from '@/components/ui';
+import { ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useProposal } from '@/hooks/useProposals';
@@ -14,8 +17,7 @@ import { useRealtimeGroup } from '@/hooks/useRealtimeProposals';
 import { rpc } from '@/lib/rpc';
 import { errorMessage, proposalOutcome } from '@/lib/errors';
 import { describeProposal } from '@/lib/describe';
-import { formatTaka } from '@/lib/money';
-import { dateTime, timeLeft } from '@/lib/format';
+import { dateTime, timeLeft, cn } from '@/lib/format';
 import type { AmendmentPayload, Expense, SettlementPayload, TransferPayload, VoidPayload } from '@/lib/types';
 
 /**
@@ -38,27 +40,32 @@ export function ProposalDetail() {
   const [busy, setBusy] = useState<'approve' | 'reject' | 'cancel' | null>(null);
   const [confirmReject, setConfirmReject] = useState(false);
 
-  if (proposal.isLoading) return <AppShell title="Proposal" back><ListSkeleton /></AppShell>;
-  if (!p) return <AppShell title="Proposal" back><ErrorState error={proposal.error} /></AppShell>;
+  if (proposal.isLoading) return <AppShell title="Request" back><HeroSkeleton /><ListSkeleton /></AppShell>;
+  if (!p) return <AppShell title="Request" back><ErrorState error={proposal.error} /></AppShell>;
 
   const parts = p.proposal_participants ?? [];
   const mine = parts.find((x) => x.user_id === me);
   const pending = p.status === 'pending' && new Date(p.expires_at) > new Date();
   const canDecide = pending && mine?.decision === 'pending';
   const leaderRecorded = (p.payload as SettlementPayload).leader_recorded;
+  const type = PROPOSAL_TYPE[p.type];
+  const TypeIcon = type.icon;
+  const agreed = parts.filter((x) => x.decision === 'approved').length;
+  const outcome = leaderRecorded ? `Recorded by ${name(p.proposer_id)} (trip leader). No approval needed inside an active trip.`
+    : proposalOutcome(p.status === 'pending' ? 'expired' : p.status, p.type);
 
   async function act(kind: 'approve' | 'reject' | 'cancel') {
     setBusy(kind);
     try {
       if (kind === 'cancel') {
         await rpc.cancelProposal(p!.id);
-        toast('Withdrawn');
+        toast('Request withdrawn');
       } else {
         const r = await rpc.respond(p!.id, kind === 'approve');
         toast(
-          r === 'approved' ? 'Approved by everyone — the ledger is updated'
-          : r === 'pending' ? 'Your approval is recorded'
-          : r === 'rejected' ? 'Declined — nothing changed'
+          r === 'approved' ? 'Approved by everyone. Balances updated.'
+          : r === 'pending' ? 'Approved. Waiting for the others.'
+          : r === 'rejected' ? 'Declined. Nothing changed.'
           : proposalOutcome(r, p!.type),
           r === 'invalidated' || r === 'expired' ? 'info' : 'ok',
         );
@@ -74,64 +81,75 @@ export function ProposalDetail() {
 
   return (
     <AppShell title={{ transfer: 'Debt transfer', settlement: 'Payment', amendment: 'Correction', void: 'Cancel an expense' }[p.type]} back>
-      <Card>
-        <p className="text-xs text-slate-500">
-          <Link to={`/groups/${p.group_id}`} className="underline">{p.groups.name}</Link> · proposed by {name(p.proposer_id, { you: true })} · {dateTime(p.created_at)}
-        </p>
-        <p className="mt-2 text-lg font-medium text-slate-900">
+      <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-5">
+        <div className="flex items-center gap-3">
+          <IconTile tone="brand"><TypeIcon size={20} /></IconTile>
+          <div className="min-w-0 text-[13px] text-slate-500">
+            <Link to={`/groups/${p.group_id}`} className="block truncate font-semibold text-slate-700 hover:underline">{p.groups.name}</Link>
+            From {name(p.proposer_id, { you: true })}, {dateTime(p.created_at)}
+          </div>
+        </div>
+        <p className="mt-4 font-display text-[20px] font-semibold leading-snug text-slate-900">
           {describeProposal(p, (x) => name(x, { you: true }), voidExpense.data?.description)}
         </p>
-        {p.note && <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm text-slate-700">“{p.note}”</p>}
-      </Card>
+        {p.note && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[15px] text-slate-700">“{p.note}”</p>}
+      </div>
 
       {pending && pairs.data && (
         <Impact p={p} me={me} owes={pairs.data.owes} name={(x) => name(x, { you: true })} expense={voidExpense.data} />
       )}
 
-      <SectionTitle>{pending ? 'Everyone must agree' : 'Outcome'}</SectionTitle>
-      <Card className="divide-y divide-slate-100 p-0">
-        {parts.map((x) => (
-          <div key={x.user_id} className="flex items-center justify-between px-4 py-2.5 text-[15px]">
-            <span>{name(x.user_id, { you: true })}{x.user_id === p.proposer_id && <span className="text-xs text-slate-500"> · proposer</span>}</span>
-            {x.decision === 'approved' ? <Badge tone="owed">✓ approved</Badge>
-              : x.decision === 'rejected' ? <Badge tone="owe">✗ declined</Badge>
-              : <Badge tone="amber">waiting</Badge>}
-          </div>
-        ))}
-      </Card>
+      <Section title={pending ? 'Everyone must agree' : 'Responses'} action={<ApprovalDots agreed={agreed} total={parts.length} />}>
+        <ListGroup>
+          {parts.map((x) => (
+            <ListRow key={x.user_id}
+                     leading={<Avatar name={name(x.user_id)} seed={x.user_id} />}
+                     title={name(x.user_id, { you: true })}
+                     subtitle={x.user_id === p.proposer_id ? 'Proposed this' : undefined}
+                     trailing={x.decision === 'approved' ? <Badge tone="owed"><CheckCircle2 size={12} aria-hidden /> Agreed</Badge>
+                       : x.decision === 'rejected' ? <Badge tone="owe"><XCircle size={12} aria-hidden /> Declined</Badge>
+                       : <Badge tone="amber"><Clock size={12} aria-hidden /> Waiting</Badge>} />
+          ))}
+        </ListGroup>
+        {pending && <p className="mt-2 px-1 text-[13px] text-slate-500">{timeLeft(p.expires_at)}. One “no” ends it.</p>}
+      </Section>
 
-      {pending ? (
-        <p className="mt-2 text-xs text-slate-500">{timeLeft(p.expires_at)} · one “no” ends it — there’s no majority vote.</p>
-      ) : (
-        <Card className={p.status === 'approved' ? 'mt-3 border-owed/30 bg-owed-soft' : 'mt-3 bg-slate-50'}>
-          <p className="text-[15px] font-medium text-slate-900">
-            {leaderRecorded ? `Recorded by ${name(p.proposer_id)} (trip leader) — no approval needed inside an active trip`
-              : proposalOutcome(p.status === 'pending' ? 'expired' : p.status, p.type)}
-          </p>
-          {p.resolved_at && <p className="text-xs text-slate-500">{dateTime(p.resolved_at)}</p>}
-          {p.status === 'rejected' && <p className="mt-1 text-sm text-slate-600">A declined proposal can’t be revived. Anyone involved can make a new one.</p>}
-        </Card>
+      {!pending && (
+        <div className={cn('flex items-start gap-3 rounded-2xl px-4 py-4',
+                          p.status === 'approved' ? 'bg-owed-soft text-owed' : 'bg-slate-100 text-slate-700')}>
+          {p.status === 'approved' ? <CheckCircle2 size={20} className="mt-0.5 shrink-0" aria-hidden /> : <Info size={20} className="mt-0.5 shrink-0" aria-hidden />}
+          <div>
+            <p className="text-[15px] font-semibold">{outcome}</p>
+            {p.resolved_at && <p className="mt-0.5 text-[13px] opacity-80">{dateTime(p.resolved_at)}</p>}
+            {p.status === 'rejected' && <p className="mt-1 text-[14px]">Anyone involved can make a new request.</p>}
+          </div>
+        </div>
+      )}
+
+      {pending && mine && mine.decision !== 'pending' && p.proposer_id !== me && (
+        <p className="text-center text-[15px] text-slate-500">You {mine.decision === 'approved' ? 'agreed' : 'declined'}. Waiting for the others.</p>
       )}
 
       {canDecide && (
-        <div className="sticky bottom-20 mt-6 grid grid-cols-2 gap-2">
-          <Button size="lg" variant="outline" busy={busy === 'reject'} onClick={() => setConfirmReject(true)}>Decline</Button>
-          <Button size="lg" busy={busy === 'approve'} onClick={() => act('approve')}>Approve</Button>
-        </div>
-      )}
-      {pending && mine && mine.decision !== 'pending' && p.proposer_id !== me && (
-        <p className="mt-4 text-center text-sm text-slate-500">You {mine.decision} this. Waiting for the others.</p>
+        <StickyFooter>
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="lg" variant="outline" className="h-14 rounded-2xl" busy={busy === 'reject'} onClick={() => setConfirmReject(true)}>Decline</Button>
+            <Button size="lg" className="h-14 rounded-2xl" busy={busy === 'approve'} onClick={() => act('approve')}>Approve</Button>
+          </div>
+        </StickyFooter>
       )}
       {pending && p.proposer_id === me && (
-        <Button className="mt-4" block variant="ghost" busy={busy === 'cancel'} onClick={() => act('cancel')}>Withdraw this proposal</Button>
+        <Button block variant="ghost" className="text-owe hover:bg-owe-soft" busy={busy === 'cancel'} onClick={() => act('cancel')}>Withdraw request</Button>
       )}
 
-      <Sheet open={confirmReject} onClose={() => setConfirmReject(false)} title="Decline?">
-        <p className="text-[15px] text-slate-700">Nothing will change, and you don’t have to give a reason. This can’t be undone — they’d need to propose again.</p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => setConfirmReject(false)}>Back</Button>
-          <Button variant="danger" busy={busy === 'reject'} onClick={() => act('reject')}>Decline</Button>
-        </div>
+      <Sheet open={confirmReject} onClose={() => setConfirmReject(false)} title="Decline this request?"
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => setConfirmReject(false)}>Back</Button>
+                 <Button variant="danger" busy={busy === 'reject'} onClick={() => act('reject')}>Decline</Button>
+               </div>
+             }>
+        <p className="text-[15px] text-slate-700">Nothing will change, and no reason is needed. They’d have to send a new request.</p>
       </Sheet>
     </AppShell>
   );
@@ -142,18 +160,13 @@ function Impact({ p, me, owes, name, expense }: {
   p: { type: string; payload: unknown }; me: string;
   owes: (a: string, b: string) => number; name: (id: string) => string; expense?: Expense;
 }) {
-  const line = (a: string, b: string, v: number): ReactNode =>
-    v === 0 ? `${name(a)} and ${name(b)} are square`
-    : v > 0 ? `${name(a)} owe${name(a) === 'You' ? '' : 's'} ${name(b)} ${formatTaka(v)}`
-    : `${name(b)} owe${name(b) === 'You' ? '' : 's'} ${name(a)} ${formatTaka(-v)}`;
-
   let rows: { a: string; b: string; before: number; after: number }[] = [];
   if (p.type === 'transfer') {
     const t = p.payload as TransferPayload;
     rows = [
+      { a: t.debtor, b: t.creditor, before: owes(t.debtor, t.creditor), after: owes(t.debtor, t.creditor) + t.amount },
       { a: t.debtor, b: t.intermediary, before: owes(t.debtor, t.intermediary), after: owes(t.debtor, t.intermediary) - t.amount },
       { a: t.intermediary, b: t.creditor, before: owes(t.intermediary, t.creditor), after: owes(t.intermediary, t.creditor) - t.amount },
-      { a: t.debtor, b: t.creditor, before: owes(t.debtor, t.creditor), after: owes(t.debtor, t.creditor) + t.amount },
     ];
   } else if (p.type === 'settlement') {
     const s = p.payload as SettlementPayload;
@@ -172,18 +185,14 @@ function Impact({ p, me, owes, name, expense }: {
     }));
   }
   if (rows.length === 0) return null;
+  const before: DebtEdge[] = rows.filter((r) => r.before !== 0 || p.type !== 'transfer').map((r) => ({ a: r.a, b: r.b, v: r.before }));
+  const after: DebtEdge[] = rows.map((r) => ({ a: r.a, b: r.b, v: r.after }));
   return (
-    <Card className="mt-3 space-y-2 bg-slate-50">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">If this goes through</p>
-      {rows.map((r, i) => (
-        <div key={i} className="text-[14px]">
-          <p className="text-slate-500 line-through decoration-slate-300">{line(r.a, r.b, r.before)}</p>
-          <p className="font-medium text-slate-900">→ {line(r.a, r.b, r.after)}</p>
-        </div>
-      ))}
+    <Section title="If this goes through">
+      <DebtDiagram name={name} before={before} after={after} highlight={0} />
       {p.type !== 'amendment' && p.type !== 'void' && (
-        <p className="text-xs text-slate-500">Checked again against the live balance at the final approval. If the debt has changed by then, nothing happens and everyone is told why.</p>
+        <p className="mt-2 px-1 text-[13px] text-slate-500">Checked again at the final approval. If the debt has changed, nothing happens.</p>
       )}
-    </Card>
+    </Section>
   );
 }

@@ -85,16 +85,19 @@ function hash(s: string) {
 }
 
 /** Initials on a colour derived from a stable seed, so people stay recognisable. */
-export function Avatar({ name, url, size = 36, seed, className }: {
+export function Avatar({ name, url, size = 36, seed, className, square }: {
   name: string; url?: string | null; size?: number; seed?: string; className?: string;
+  /** Rounded square — used for groups, so they don't read as people. */
+  square?: boolean;
 }) {
   const initials = name.split(/\s+/).filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  const shape = square ? 'rounded-xl' : 'rounded-full';
   if (url) {
     return <img src={url} alt="" width={size} height={size} referrerPolicy="no-referrer"
-                className={cn('shrink-0 rounded-full object-cover', className)} style={{ width: size, height: size }} />;
+                className={cn('shrink-0 object-cover', shape, className)} style={{ width: size, height: size }} />;
   }
   return (
-    <span className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold',
+    <span className={cn('inline-flex shrink-0 items-center justify-center font-semibold', shape,
                         AVATAR_TONES[hash(seed ?? name) % AVATAR_TONES.length], className)}
           style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }} aria-hidden>
       {initials || '?'}
