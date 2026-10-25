@@ -6,7 +6,9 @@ import { cn } from '@/lib/format';
 /** `v > 0`: a owes b.  `v < 0`: b owes a.  `0`: square. */
 export interface DebtEdge { a: string; b: string; v: number }
 
-function EdgeRow({ e, name, emphasis }: { e: DebtEdge; name: (id: string) => string; emphasis?: boolean }) {
+function EdgeRow({ e, name, avatarName, emphasis }: {
+  e: DebtEdge; name: (id: string) => string; avatarName: (id: string) => string; emphasis?: boolean;
+}) {
   const [from, to] = e.v >= 0 ? [e.a, e.b] : [e.b, e.a];
   const fromName = name(from);
   const toName = name(to);
@@ -14,8 +16,8 @@ function EdgeRow({ e, name, emphasis }: { e: DebtEdge; name: (id: string) => str
   return (
     <li className="flex items-center gap-3 py-2">
       <span className="flex shrink-0 -space-x-2">
-        <Avatar name={fromName} seed={from} size={30} className="ring-2 ring-white" />
-        <Avatar name={toName} seed={to} size={30} className="ring-2 ring-white" />
+        <Avatar name={avatarName(from)} seed={from} size={30} className="ring-2 ring-white" />
+        <Avatar name={avatarName(to)} seed={to} size={30} className="ring-2 ring-white" />
       </span>
       {e.v === 0 ? (
         <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[15px] text-slate-500">
@@ -39,8 +41,12 @@ function EdgeRow({ e, name, emphasis }: { e: DebtEdge; name: (id: string) => str
  * Before → after, side by side in time (§13.3: "Users will not approve what
  * they do not understand, and comprehension is the product").
  */
-export function DebtDiagram({ before, after, name, beforeLabel = 'Right now', afterLabel = 'After', highlight }: {
-  before: DebtEdge[]; after: DebtEdge[]; name: (id: string) => string;
+export function DebtDiagram({ before, after, name, avatarName = name, beforeLabel = 'Right now', afterLabel = 'After', highlight }: {
+  before: DebtEdge[]; after: DebtEdge[];
+  /** Label in sentences; "You" for the viewer. */
+  name: (id: string) => string;
+  /** Real name, for avatar initials. */
+  avatarName?: (id: string) => string;
   beforeLabel?: string; afterLabel?: string;
   /** Index in `after` of the edge that is the point of the change. */
   highlight?: number;
@@ -48,13 +54,13 @@ export function DebtDiagram({ before, after, name, beforeLabel = 'Right now', af
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-white px-4 py-3">
       <p className="text-[13px] font-semibold text-slate-500">{beforeLabel}</p>
-      <ul className="divide-y divide-slate-100">{before.map((e, i) => <EdgeRow key={i} e={e} name={name} />)}</ul>
+      <ul className="divide-y divide-slate-100">{before.map((e, i) => <EdgeRow key={i} e={e} name={name} avatarName={avatarName} />)}</ul>
       <div className="my-1 flex items-center gap-2 text-slate-300" aria-hidden>
         <span className="h-px flex-1 bg-slate-200" /><ArrowDown size={16} /><span className="h-px flex-1 bg-slate-200" />
       </div>
       <p className="text-[13px] font-semibold text-brand">{afterLabel}</p>
       <ul className="divide-y divide-slate-100">
-        {after.map((e, i) => <EdgeRow key={i} e={e} name={name} emphasis={i === highlight} />)}
+        {after.map((e, i) => <EdgeRow key={i} e={e} name={name} avatarName={avatarName} emphasis={i === highlight} />)}
       </ul>
     </div>
   );

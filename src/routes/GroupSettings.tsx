@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { AppShell, SectionTitle } from '@/components/AppShell';
-import { Avatar, Badge, Button, Card, Sheet } from '@/components/ui';
+import { Crown, LogOut, RefreshCw } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { Avatar, Badge, Button, IconTile, ListGroup, ListRow, Section, Sheet } from '@/components/ui';
 import { InviteCard } from '@/components/InviteCard';
+import { ListSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
-import { useGroup, useMembers } from '@/hooks/useGroups';
+import { useGroup, useMembers, type Member } from '@/hooks/useGroups';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
+
+type Confirm = null | { kind: 'rotate' } | { kind: 'leave' } | { kind: 'owner'; member: Member };
 
 /** Stories A-05 (rotate invite), A-06 (leave), ownership hand-over. */
 export function GroupSettings() {
@@ -19,7 +23,7 @@ export function GroupSettings() {
   const toast = useToast();
   const group = useGroup(groupId);
   const members = useMembers(groupId);
-  const [confirm, setConfirm] = useState<'rotate' | 'leave' | null>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
   const iAmOwner = members.data?.some((m) => m.user_id === me && m.role === 'owner');
 
@@ -30,55 +34,69 @@ export function GroupSettings() {
     finally { setBusy(false); setConfirm(null); }
   }
 
+  const copy = confirm?.kind === 'rotate'
+    ? { title: 'Reset the invite link?', body: 'The old link stops working now. People who haven’t joined need the new one.', verb: 'Reset link' }
+    : confirm?.kind === 'leave'
+      ? { title: 'Leave this group?', body: 'Your history stays, correctly attributed. You can rejoin with an invite.', verb: 'Leave group' }
+      : confirm?.kind === 'owner'
+        ? { title: `Make ${confirm.member.profile.display_name} the owner?`, body: 'They can reset the invite link and hand ownership on.', verb: 'Make owner' }
+        : null;
+
   return (
     <AppShell title="Group settings" back={`/groups/${groupId}`}>
       {group.data && (
-        <>
-          <SectionTitle>Invite link</SectionTitle>
-          <InviteCard groupName={group.data.name} code={group.data.invite_code} compact />
+        <Section title="Invite link">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4">
+            <InviteCard groupName={group.data.name} code={group.data.invite_code} compact />
+            <p className="mt-3 text-[13px] text-slate-500">Anyone with this link can join.</p>
+          </div>
           {iAmOwner && (
-            <Button variant="ghost" size="sm" className="mt-2" onClick={() => setConfirm('rotate')}>Reset invite link</Button>
+            <ListGroup className="mt-3">
+              <ListRow onClick={() => setConfirm({ kind: 'rotate' })} leading={<IconTile><RefreshCw size={20} /></IconTile>}
+                       title="Reset invite link" subtitle="Use this if the link was shared too widely" chevron />
+            </ListGroup>
           )}
-        </>
+        </Section>
       )}
 
-      <SectionTitle>Members</SectionTitle>
-      <Card className="divide-y divide-slate-100 p-0">
-        {(members.data ?? []).map((m) => (
-          <div key={m.user_id} className="flex items-center gap-3 px-4 py-3">
-            <Avatar name={m.profile.display_name} url={m.profile.avatar_url} />
-            <span className="flex-1 text-[15px]">{m.user_id === me ? 'You' : m.profile.display_name}</span>
-            {m.role === 'owner' && <Badge>owner</Badge>}
-            {iAmOwner && m.role !== 'owner' && (
-              <Button size="sm" variant="ghost" onClick={() =>
-                run(() => rpc.transferOwnership(groupId, m.user_id), `${m.profile.display_name} is now the owner`)}>
-                Make owner
-              </Button>
-            )}
-          </div>
-        ))}
-      </Card>
+      <Section title="Members">
+        {members.isLoading ? <ListSkeleton rows={3} /> : (
+          <ListGroup>
+            {(members.data ?? []).map((m) => (
+              <ListRow key={m.user_id}
+                       leading={<Avatar name={m.profile.display_name} url={m.profile.avatar_url} seed={m.user_id} />}
+                       title={m.user_id === me ? `${m.profile.display_name} (you)` : m.profile.display_name}
+                       trailing={m.role === 'owner' ? <Badge><Crown size={12} aria-hidden /> Owner</Badge>
+                         : iAmOwner ? <Button size="sm" variant="ghost" onClick={() => setConfirm({ kind: 'owner', member: m })}>Make owner</Button>
+                         : undefined} />
+            ))}
+          </ListGroup>
+        )}
+      </Section>
 
-      <div className="mt-8">
-        <Button variant="outline" block onClick={() => setConfirm('leave')}>Leave group</Button>
-        <p className="mt-2 text-center text-xs text-slate-500">You can only leave once your balance here is zero.</p>
+      <div>
+        <ListGroup>
+          <ListRow onClick={() => setConfirm({ kind: 'leave' })} tone="danger" leading={<IconTile tone="owe"><LogOut size={20} /></IconTile>}
+                   title="Leave group" />
+        </ListGroup>
+        <p className="mt-2 px-1 text-[13px] text-slate-500">You can leave once your balance here is zero.</p>
       </div>
 
-      <Sheet open={confirm !== null} onClose={() => setConfirm(null)}
-             title={confirm === 'rotate' ? 'Reset the invite link?' : 'Leave this group?'}>
-        <p className="text-[15px] text-slate-700">
-          {confirm === 'rotate'
-            ? 'The old link stops working immediately. Anyone who hasn’t joined yet will need the new one.'
-            : 'You’ll disappear from this group’s list. Your history stays, correctly attributed, and you can rejoin with an invite.'}
-        </p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
-          <Button busy={busy} variant="danger" onClick={() => confirm === 'rotate'
-            ? run(() => rpc.rotateInviteCode(groupId), 'New invite link ready')
-            : run(() => rpc.leaveGroup(groupId), 'You left the group', () => navigate('/groups', { replace: true }))}>
-            {confirm === 'rotate' ? 'Reset' : 'Leave'}
-          </Button>
-        </div>
+      <Sheet open={confirm !== null} onClose={() => setConfirm(null)} title={copy?.title ?? ''}
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
+                 <Button busy={busy} variant={confirm?.kind === 'owner' ? 'primary' : 'danger'} onClick={() => {
+                   if (confirm?.kind === 'rotate') void run(() => rpc.rotateInviteCode(groupId), 'New invite link ready');
+                   else if (confirm?.kind === 'leave') void run(() => rpc.leaveGroup(groupId), 'You left the group', () => navigate('/groups', { replace: true }));
+                   else if (confirm?.kind === 'owner') {
+                     const m = confirm.member;
+                     void run(() => rpc.transferOwnership(groupId, m.user_id), `${m.profile.display_name} is now the owner`);
+                   }
+                 }}>{copy?.verb}</Button>
+               </div>
+             }>
+        <p className="text-[15px] text-slate-700">{copy?.body}</p>
       </Sheet>
     </AppShell>
   );

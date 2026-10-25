@@ -10,6 +10,7 @@ import { useMyGroups, type MyGroup } from '@/hooks/useGroups';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/format';
 
 /** Story A-04: every group with one colour-coded net figure. */
 export function Groups() {
@@ -61,11 +62,11 @@ function Summary({ list }: { list: MyGroup[] }) {
     <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
       <div className="px-5 py-4">
         <p className="text-[14px] font-medium text-slate-500">{t('balance.youreOwed')}</p>
-        <Taka poisha={owed} className="mt-1 block font-display text-[24px] font-semibold text-owed" />
+        <Taka poisha={owed} className={cn('mt-1 block font-display text-[24px] font-semibold', owed ? 'text-owed' : 'text-slate-400')} />
       </div>
       <div className="border-l border-slate-100 px-5 py-4">
         <p className="text-[14px] font-medium text-slate-500">{t('balance.youOwe')}</p>
-        <Taka poisha={owe} className="mt-1 block font-display text-[24px] font-semibold text-owe" />
+        <Taka poisha={owe} className={cn('mt-1 block font-display text-[24px] font-semibold', owe ? 'text-owe' : 'text-slate-400')} />
       </div>
     </div>
   );

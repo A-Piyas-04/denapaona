@@ -179,11 +179,12 @@ export function ExpenseForm(props: ExpenseFormProps) {
         <Field label="Amount (৳)" htmlFor="amount" srLabel
                error={draft.amount !== '' && total === null ? 'Enter a valid amount.' : undefined}
                hint={total !== null && total > SANITY_BOUND_POISHA ? 'That looks unusually large. Check the amount.' : undefined}>
-          <div className="flex items-baseline justify-center gap-1.5">
+          <div className="mx-auto flex w-fit max-w-full items-baseline justify-center gap-1 border-b-2 border-transparent px-2 transition-colors focus-within:border-brand">
             <span className="font-display text-[30px] font-semibold text-slate-400" aria-hidden>৳</span>
             <input
               id="amount" ref={amountRef} autoFocus inputMode="decimal" autoComplete="off" placeholder="0"
-              className="w-full min-w-0 max-w-[14rem] bg-transparent text-center font-display text-[44px] font-semibold leading-tight text-slate-900 tnum placeholder:text-slate-300 focus:outline-none"
+              className="min-w-0 max-w-full bg-transparent font-display text-[44px] font-semibold leading-tight text-slate-900 tnum placeholder:text-slate-300 focus:outline-none"
+              style={{ width: `${Math.max(draft.amount.length, 1) + 0.6}ch` }}
               value={draft.amount}
               onChange={(e) => isPartialTakaInput(e.target.value) && set({ amount: e.target.value })}
             />
@@ -201,7 +202,7 @@ export function ExpenseForm(props: ExpenseFormProps) {
       <div className="space-y-2">
         <ListGroup>
           <ListRow onClick={() => setSheet('payer')} chevron
-                   leading={<Avatar name={nameOf(draft.payerId)} seed={draft.payerId} />}
+                   leading={<IconTile tone="brand"><Wallet size={20} /></IconTile>}
                    title={<><span className="font-normal text-slate-500">Paid by </span>{nameOf(draft.payerId)}</>}
                    aria-label={`Paid by ${nameOf(draft.payerId)}. Change`} />
           <ListRow onClick={() => setSheet('split')} chevron data-tour="split-row"

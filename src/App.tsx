@@ -67,8 +67,8 @@ function Authed({ children }: { children: ReactNode }) {
   useRealtimeInbox(userId);
   if (loading) {
     return (
-      <div className="mx-auto max-w-app space-y-3 p-4">
-        <Skeleton className="h-10 w-40" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" />
+      <div className="mx-auto max-w-app space-y-4 px-4 pt-5" aria-busy>
+        <Skeleton className="h-8 w-32" /><Skeleton className="h-28 w-full rounded-3xl" /><Skeleton className="h-40 w-full rounded-2xl" />
       </div>
     );
   }
@@ -81,9 +81,9 @@ function Authed({ children }: { children: ReactNode }) {
 
 function NotConfigured() {
   return (
-    <div className="mx-auto max-w-app p-6">
-      <h1 className="text-xl font-semibold">HishebNama isn’t configured</h1>
-      <p className="mt-2 text-slate-600">
+    <div className="mx-auto max-w-app px-6 pt-14">
+      <h1 className="text-[22px] font-semibold text-slate-900">HishebNama isn’t configured</h1>
+      <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
         Copy <code>.env.example</code> to <code>.env.local</code> and set <code>VITE_SUPABASE_URL</code> and{' '}
         <code>VITE_SUPABASE_ANON_KEY</code>. Never put the service role key in any <code>VITE_</code> variable.
       </p>

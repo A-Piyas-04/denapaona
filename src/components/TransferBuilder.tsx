@@ -108,9 +108,14 @@ export function TransferBuilder({ groupId, me, people, owes }: {
 
           <DebtDiagram
             name={name}
+            avatarName={(id) => people.find((p) => p.id === id)?.name ?? '?'}
             beforeLabel="Right now"
             afterLabel="After, if all three agree"
-            before={[{ a: debtor, b: me, v: leg1 }, { a: me, b: creditor, v: leg2 }]}
+            before={[
+              { a: debtor, b: me, v: leg1 },
+              { a: me, b: creditor, v: leg2 },
+              ...(owes(debtor, creditor) !== 0 ? [{ a: debtor, b: creditor, v: owes(debtor, creditor) }] : []),
+            ]}
             after={[
               { a: debtor, b: creditor, v: after.debtorToCreditor },
               { a: debtor, b: me, v: after.debtorToMe },

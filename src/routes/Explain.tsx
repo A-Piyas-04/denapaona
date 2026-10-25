@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, ListOrdered, Map as MapIcon } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { DerivationView } from '@/components/DerivationView';
-import { Button, Card, Field, Input, Segmented, Sheet, Textarea } from '@/components/ui';
-import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
-import { Taka } from '@/components/Money';
+import { Banner, Button, Field, Input, Section, Segmented, Sheet, StatHero, Textarea } from '@/components/ui';
+import { EmptyState, ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
@@ -41,7 +41,7 @@ export function Explain() {
       const debtor = final < 0 ? me : otherId;
       const creditor = final < 0 ? otherId : me;
       const id = await rpc.proposeSettlement({ groupId, debtor, creditor, amount: Math.abs(final) });
-      toast(final < 0 ? `Sent — ${other} needs to confirm they received it` : `Sent — ${other} needs to confirm`);
+      toast(final < 0 ? `Sent. ${other} confirms they got it.` : `Sent. ${other} confirms they paid.`);
       navigate(`/proposals/${id}`);
     } catch (e) { toast(errorMessage(e), 'error'); }
     finally { setBusy(false); }
@@ -50,46 +50,45 @@ export function Explain() {
   return (
     <AppShell title={`You and ${other}`} back>
       {tripId && (
-        <p className="mb-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-700">
-          Showing <strong>{trip.data?.trip.name ?? 'one trip'}</strong> only — not your whole balance with {other}.{' '}
-          <Link to={`/explain/${groupId}/${otherId}`} className="font-medium text-brand underline">See everything</Link>
-        </p>
+        <Banner icon={MapIcon} to={`/explain/${groupId}/${otherId}`} action={<span className="text-[14px] font-semibold">See all</span>}>
+          Showing {trip.data?.trip.name ?? 'one trip'} only
+        </Banner>
       )}
 
-      {explain.isLoading ? <ListSkeleton rows={4} /> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
+      {explain.isLoading ? <><HeroSkeleton /><ListSkeleton rows={4} /></> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
         <>
           {!explain.data.consistent && (
             // Invariant I6, made visible.  This can only mean an engine bug — never hidden (E-01#2).
-            <div className="mb-3 rounded-xl bg-owe p-3 text-sm text-white" role="alert">
-              <strong>Something’s wrong.</strong> The steps below add up to {formatTaka(explain.data.final)}, but the
-              balance says {formatTaka(explain.data.expected)}. Please don’t settle on this figure; report it to whoever runs this app.
+            <div className="flex items-start gap-3 rounded-2xl bg-owe p-4 text-[15px] text-white" role="alert">
+              <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden />
+              <p><strong>Something’s wrong.</strong> The steps add up to {formatTaka(explain.data.final)}, but the
+                balance says {formatTaka(explain.data.expected)}. Don’t settle on this figure. Report it to whoever runs this app.</p>
             </div>
           )}
-          <Card className="mb-4">
-            <p className="text-sm text-slate-500">{final === 0 ? 'Right now' : final > 0 ? `${other} owes you` : `You owe ${other}`}</p>
-            <p className="text-3xl font-semibold">
-              {final === 0 ? <span className="text-slate-500">Square</span>
-                : <Taka poisha={Math.abs(final)} className={final > 0 ? 'text-owed' : 'text-owe'} />}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Every step that produced this figure is listed below, oldest first. The last running total is the figure above.
-            </p>
-            {!tripId && (
-              <div className="mt-3 flex flex-wrap gap-2">
+          <StatHero
+            label={final === 0 ? 'Right now' : final > 0 ? `${other} owes you` : `You owe ${other}`}
+            tone={final > 0 ? 'owed' : final < 0 ? 'owe' : 'neutral'}
+            value={final === 0 ? <span className="text-slate-400">Square</span>
+              : <span className={final > 0 ? 'text-owed' : 'text-owe'}>{formatTaka(Math.abs(final))}</span>}
+            sub={!tripId ? (
+              <div className="mt-1 flex flex-wrap gap-2">
                 {final !== 0 && (
                   <Button size="sm" busy={busy} onClick={settleAll}>
-                    {final < 0 ? `Settle all — ${formatTaka(-final)}` : `${other} paid me ${formatTaka(final)}`}
+                    {final < 0 ? `Settle ${formatTaka(-final)}` : `${other} paid me`}
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => setCorrecting(true)}>Propose a correction</Button>
+                <Button size="sm" variant="secondary" onClick={() => setCorrecting(true)}>Propose a correction</Button>
               </div>
+            ) : undefined}
+          />
+          <Section title="How we got here">
+            <p className="-mt-1 mb-3 px-1 text-[13px] text-slate-500">Every step that produced this figure, oldest first.</p>
+            {explain.data.rows.length === 0 ? (
+              <EmptyState icon={ListOrdered} title={tripId ? 'Nothing on this trip between you two' : 'Nothing between you two yet'} />
+            ) : (
+              <DerivationView rows={explain.data.rows} groupId={groupId} otherName={other} />
             )}
-          </Card>
-          {explain.data.rows.length === 0 ? (
-            <EmptyState title={tripId ? 'Nothing on this trip between you two.' : 'Nothing between you two yet.'} />
-          ) : (
-            <DerivationView rows={explain.data.rows} groupId={groupId} otherName={other} />
-          )}
+          </Section>
           <CorrectionSheet open={correcting} onClose={() => setCorrecting(false)} groupId={groupId}
                            me={me} otherId={otherId} other={other} current={final} />
         </>
@@ -135,11 +134,12 @@ function CorrectionSheet({ open, onClose, groupId, me, otherId, other, current }
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Propose a correction">
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600">
-          Right now: {current === 0 ? 'you’re square' : current > 0 ? `${other} owes you ${formatTaka(current)}` : `you owe ${other} ${formatTaka(-current)}`}.
-          {' '}{other} has to agree before anything changes.
+    <Sheet open={open} onClose={onClose} title="Propose a correction"
+           footer={<Button block size="lg" busy={busy} disabled={target === null || delta === 0 || !reason.trim()} onClick={send}>Send for approval</Button>}>
+      <div className="space-y-5">
+        <p className="text-[15px] text-slate-600">
+          Now: {current === 0 ? 'you’re square' : current > 0 ? `${other} owes you ${formatTaka(current)}` : `you owe ${other} ${formatTaka(-current)}`}.
+          {' '}{other} must agree first.
         </p>
         <Segmented label="Direction" value={dir} onChange={setDir}
                    options={[{ value: 'they', label: `${other} owes me` }, { value: 'me', label: `I owe ${other}` }]} />
@@ -149,7 +149,6 @@ function CorrectionSheet({ open, onClose, groupId, me, otherId, other, current }
         <Field label="Why?" htmlFor="corr-reason">
           <Textarea id="corr-reason" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="We agreed the tea was my treat" />
         </Field>
-        <Button block busy={busy} disabled={target === null || delta === 0 || !reason.trim()} onClick={send}>Send for approval</Button>
       </div>
     </Sheet>
   );

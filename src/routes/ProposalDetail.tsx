@@ -39,6 +39,7 @@ export function ProposalDetail() {
   const toast = useToast();
   const [busy, setBusy] = useState<'approve' | 'reject' | 'cancel' | null>(null);
   const [confirmReject, setConfirmReject] = useState(false);
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
   if (proposal.isLoading) return <AppShell title="Request" back><HeroSkeleton /><ListSkeleton /></AppShell>;
   if (!p) return <AppShell title="Request" back><ErrorState error={proposal.error} /></AppShell>;
@@ -96,7 +97,7 @@ export function ProposalDetail() {
       </div>
 
       {pending && pairs.data && (
-        <Impact p={p} me={me} owes={pairs.data.owes} name={(x) => name(x, { you: true })} expense={voidExpense.data} />
+        <Impact p={p} me={me} owes={pairs.data.owes} name={(x) => name(x, { you: true })} realName={(x) => name(x)} expense={voidExpense.data} />
       )}
 
       <Section title={pending ? 'Everyone must agree' : 'Responses'} action={<ApprovalDots agreed={agreed} total={parts.length} />}>
@@ -139,7 +140,7 @@ export function ProposalDetail() {
         </StickyFooter>
       )}
       {pending && p.proposer_id === me && (
-        <Button block variant="ghost" className="text-owe hover:bg-owe-soft" busy={busy === 'cancel'} onClick={() => act('cancel')}>Withdraw request</Button>
+        <Button block variant="ghost" className="text-owe hover:bg-owe-soft" busy={busy === 'cancel'} onClick={() => setConfirmWithdraw(true)}>Withdraw request</Button>
       )}
 
       <Sheet open={confirmReject} onClose={() => setConfirmReject(false)} title="Decline this request?"
@@ -151,14 +152,24 @@ export function ProposalDetail() {
              }>
         <p className="text-[15px] text-slate-700">Nothing will change, and no reason is needed. They’d have to send a new request.</p>
       </Sheet>
+
+      <Sheet open={confirmWithdraw} onClose={() => setConfirmWithdraw(false)} title="Withdraw this request?"
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => setConfirmWithdraw(false)}>Keep it</Button>
+                 <Button variant="danger" busy={busy === 'cancel'} onClick={() => { setConfirmWithdraw(false); void act('cancel'); }}>Withdraw</Button>
+               </div>
+             }>
+        <p className="text-[15px] text-slate-700">Nothing will change. You can send a new request later.</p>
+      </Sheet>
     </AppShell>
   );
 }
 
 /** Before → after, computed from live balances (§13.3: comprehension is the product). */
-function Impact({ p, me, owes, name, expense }: {
+function Impact({ p, me, owes, name, realName, expense }: {
   p: { type: string; payload: unknown }; me: string;
-  owes: (a: string, b: string) => number; name: (id: string) => string; expense?: Expense;
+  owes: (a: string, b: string) => number; name: (id: string) => string; realName: (id: string) => string; expense?: Expense;
 }) {
   let rows: { a: string; b: string; before: number; after: number }[] = [];
   if (p.type === 'transfer') {
@@ -189,7 +200,7 @@ function Impact({ p, me, owes, name, expense }: {
   const after: DebtEdge[] = rows.map((r) => ({ a: r.a, b: r.b, v: r.after }));
   return (
     <Section title="If this goes through">
-      <DebtDiagram name={name} before={before} after={after} highlight={0} />
+      <DebtDiagram name={name} avatarName={realName} before={before} after={after} highlight={0} />
       {p.type !== 'amendment' && p.type !== 'void' && (
         <p className="mt-2 px-1 text-[13px] text-slate-500">Checked again at the final approval. If the debt has changed, nothing happens.</p>
       )}

@@ -21,7 +21,7 @@ const MESSAGES: Record<string, string> = {
   STILL_AN_ACTIVE_TRIP_LEADER: 'Hand over trip leadership first.',
 
   INVALID_AMOUNT: 'Enter an amount.',
-  DESCRIPTION_REQUIRED: 'Add a description — an unlabelled expense can’t be checked later.',
+  DESCRIPTION_REQUIRED: 'Add a description so it can be checked later.',
   PAYER_NOT_A_MEMBER: 'The person who paid isn’t in this group.',
   SHARE_USER_NOT_A_MEMBER: 'Someone in this split is no longer in the group.',
   NEGATIVE_SHARE: 'A share can’t be negative.',
@@ -47,9 +47,8 @@ const MESSAGES: Record<string, string> = {
   CANNOT_CANCEL: 'Only the person who proposed this can withdraw it, and only while it’s pending.',
 
   EXPENSE_NOT_FOUND: 'That expense doesn’t exist, or you can’t see it.',
-  NOT_AUTHORIZED_TO_VOID:
-    'Only a trip leader can cancel this directly, and only while the trip is active. You can propose cancelling it instead.',
-  VOID_REASON_REQUIRED: 'Give a reason — an unexplained cancellation is indistinguishable from tampering.',
+  NOT_AUTHORIZED_TO_VOID: 'Only a leader of an active trip can cancel this directly. Propose cancelling it instead.',
+  VOID_REASON_REQUIRED: 'Give a reason for cancelling.',
   ALREADY_VOIDED: 'This expense was already cancelled.',
   VOID_ALREADY_PROPOSED: 'A cancellation is already waiting for approval.',
   NOT_INVOLVED_IN_EXPENSE: 'Only the payer or someone in the split can propose cancelling this.',
@@ -62,8 +61,7 @@ const MESSAGES: Record<string, string> = {
   CANNOT_REMOVE_LAST_LEADER: 'A trip needs at least one leader.',
   TARGET_NOT_A_LEADER: 'They aren’t a leader of this trip.',
   INVALID_ENTRY_MODE: 'Choose who can add expenses.',
-  EXCEEDS_TRIP_BALANCE:
-    'That’s more than this trip created between them. Leaders can only settle what the trip itself created.',
+  EXCEEDS_TRIP_BALANCE: 'That’s more than this trip created between them.',
   DISPUTE_REASON_REQUIRED: 'Say what looks wrong.',
   CANNOT_WITHDRAW_DISPUTE: 'Only the person who raised this can withdraw it.',
 };
@@ -92,8 +90,8 @@ export function toAppError(err: unknown): AppError {
     const net = Number(detail ?? 0);
     const msg =
       net < 0
-        ? `Settle up before leaving — you still owe ${formatTaka(-net)}.`
-        : `Settle up before leaving — you’re still owed ${formatTaka(net)}.`;
+        ? `Settle up before leaving. You still owe ${formatTaka(-net)}.`
+        : `Settle up before leaving. You’re still owed ${formatTaka(net)}.`;
     return new AppError(code, msg, detail);
   }
   return new AppError(code, MESSAGES[code] ?? 'Something went wrong. Please try again.', detail);
@@ -111,7 +109,7 @@ export function proposalOutcome(status: string, type: string): string {
     case 'approved':
       return 'Approved by everyone';
     case 'rejected':
-      return 'Declined — nothing changed';
+      return 'Declined. Nothing changed.';
     case 'expired':
       return 'This expired before everyone responded';
     case 'cancelled':
@@ -119,7 +117,7 @@ export function proposalOutcome(status: string, type: string): string {
     case 'invalidated':
       return type === 'void'
         ? 'This expense was already cancelled'
-        : 'This is no longer possible because the underlying debt changed since it was proposed';
+        : 'No longer possible. The debt changed after this was sent.';
     default:
       return status;
   }

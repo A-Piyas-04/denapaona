@@ -1,7 +1,7 @@
 // Local demo without a Supabase project — for looking at the app, never deploy.
 //
 //   npm run demo            reuse the demo database if it exists
-//   npm run demo -- --reset start from a fresh, re-seeded database
+//   npm run demo:reset      start from a fresh, re-seeded database
 //
 // Runs the real migrations on PostgreSQL 16 + PostgREST in Docker (with the
 // test shim standing in for Supabase's auth schema), serves a stand-in for
@@ -22,7 +22,21 @@ const REST_PORT = 54340;
 const GATEWAY_PORT = 54341;
 const APP_PORT = 5173;
 const SECRET = 'local-demo-jwt-secret-at-least-32-characters-long';
+// Bump when scripts/demo-seed.sql changes, so an older demo database says so.
+const SEED_VERSION = 2;
 const reset = process.argv.includes('--reset');
+
+// What each demo user is good for trying.  Shown on the sign-in page and in DEMO.md.
+const ROLES = {
+  Arif: 'Owner of Hall 3 Friends, leader of the Cox’s Bazar trip. Has a payment to confirm.',
+  Sami: 'On the Cox’s Bazar trip but not a leader. Sent a transfer; has a cancellation to approve.',
+  Rafi: 'Trip leader: can record payments and fix entries. Has a cancellation to approve.',
+  Nadia: 'Owner of Flat 4B. Questioned an expense. Has a payment to confirm.',
+  Imran: 'Owner of Office Lunch. Has a payment to confirm and a request to approve.',
+  Mitu: 'In three groups. Sent a payment; has a cancellation to approve.',
+  Joya: 'Has a correction waiting for her approval.',
+  Tania: 'In no group yet. Try the empty state and joining with an invite link.',
+};
 
 function docker(args, { input, quiet = false, allowFail = false } = {}) {
   const r = spawnSync('docker', args, { input, encoding: 'utf8' });
@@ -81,43 +95,12 @@ if (fresh) {
         end $$;
         grant anon, authenticated to authenticator;`);
 
-  console.log('── seeding demo users and a group');
-  psql(`do $$
-  declare arif uuid; sami uuid; rafi uuid; nadia uuid; g uuid; code text;
-  begin
-    arif  := t.new_user('Arif');  sami := t.new_user('Sami');
-    rafi  := t.new_user('Rafi');  nadia := t.new_user('Nadia');
-    perform t.new_user('Tania');  -- not in the group: try joining with the invite link
-
-    perform t.login(arif);
-    g := public.create_group('Hall 3 Friends');
-    select invite_code into code from public.groups where id = g;
-    perform t.login(sami);  perform public.join_group(code);
-    perform t.login(rafi);  perform public.join_group(code);
-    perform t.login(nadia); perform public.join_group(code);
-
-    -- ৳1,200 dinner, Arif paid, split Arif/Sami/Rafi
-    perform t.login(arif);
-    perform public.add_expense(g, arif, 120000, 'Dinner at Star', jsonb_build_array(
-      jsonb_build_object('user_id', arif, 'share', 40000),
-      jsonb_build_object('user_id', sami, 'share', 40000),
-      jsonb_build_object('user_id', rafi, 'share', 40000)));
-    -- ৳900 hotel, Rafi paid, split Rafi/Sami/Nadia
-    perform t.login(rafi);
-    perform public.add_expense(g, rafi, 90000, 'Hotel night', jsonb_build_array(
-      jsonb_build_object('user_id', rafi,  'share', 30000),
-      jsonb_build_object('user_id', sami,  'share', 30000),
-      jsonb_build_object('user_id', nadia, 'share', 30000)));
-    -- ৳450 taxi, Sami paid, split Arif/Sami/Nadia
-    perform t.login(sami);
-    perform public.add_expense(g, sami, 45000, 'Taxi to station', jsonb_build_array(
-      jsonb_build_object('user_id', arif,  'share', 15000),
-      jsonb_build_object('user_id', sami,  'share', 15000),
-      jsonb_build_object('user_id', nadia, 'share', 15000)));
-    perform t.login(null);
-  end $$;
-  create table t.demo_ready ();`);
+  console.log('── seeding demo data (scripts/demo-seed.sql)');
+  psql(fs.readFileSync(path.join(ROOT, 'scripts/demo-seed.sql'), 'utf8'));
+  psql(`create table t.demo_ready (); create table t.demo_seed_v${SEED_VERSION} ();`);
 }
+
+const seedCurrent = psql(`select to_regclass('t.demo_seed_v${SEED_VERSION}') is not null`).stdout.trim() === 't';
 
 // ── PostgREST ────────────────────────────────────────────────────────────
 if (!running(REST_NAME)) {
@@ -140,9 +123,17 @@ function mint(id, email) {
   const p = b64({ sub: id, role: 'authenticated', aud: 'authenticated', email, exp: Math.floor(Date.now() / 1000) + 30 * 86400 });
   return `${h}.${p}.${crypto.createHmac('sha256', SECRET).update(`${h}.${p}`).digest('base64url')}`;
 }
-const users = () => psql(`select id || '|' || display_name || '|' || coalesce(email, '') from public.profiles order by created_at`)
-  .stdout.trim().split('\n').filter(Boolean).map((l) => { const [id, name, email] = l.split('|'); return { id, name, email }; });
+const users = () => psql(`
+    select p.id || '|' || p.display_name || '|' || coalesce(p.email, '') || '|' ||
+           coalesce((select string_agg(g.name, ', ' order by g.name) from public.group_members m
+                     join public.groups g on g.id = m.group_id where m.user_id = p.id), '')
+    from public.profiles p order by p.created_at, p.display_name`)
+  .stdout.trim().split('\n').filter(Boolean).map((l) => {
+    const [id, name, email, groups] = l.split('|');
+    return { id, name, email, groups };
+  });
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const initials = (n) => n.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
 
 const cors = {
   'access-control-allow-origin': '*',
@@ -157,14 +148,29 @@ http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
 
     if (url.pathname === '/') {
-      const list = users().map((u) =>
-        `<li><a href="/login/${u.id}">${esc(u.name)}</a> <small>${esc(u.email)}</small></li>`).join('');
+      const list = users().map((u) => `
+<li><a href="/login/${u.id}">
+  <span class="av">${esc(initials(u.name))}</span>
+  <span class="tx"><b>${esc(u.name)}</b><small>${esc(u.email)}${u.groups ? ` · ${esc(u.groups)}` : ''}</small>
+  ${ROLES[u.name] ? `<em>${esc(ROLES[u.name])}</em>` : ''}</span>
+</a></li>`).join('');
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      return res.end(`<!doctype html><meta charset="utf-8"><title>HishebNama demo sign-in</title>
-<style>body{font:16px system-ui;max-width:28rem;margin:3rem auto;padding:0 1rem}li{margin:.6rem 0}a{font-weight:600;color:#0f766e}small{color:#64748b}</style>
-<h1>Sign in as a demo user</h1>
-<p>Local demo only. Stands in for Google sign-in. Open a private window to be a second user at the same time.</p>
-<ul>${list}</ul>`);
+      return res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HishebNama demo sign-in</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;background:#F4F6F5;color:#0f172a;margin:0}
+main{max-width:30rem;margin:0 auto;padding:2.5rem 1rem}
+h1{font-size:1.5rem;margin:0 0 .25rem}p{color:#475569;margin:0 0 1.5rem}
+ul{list-style:none;padding:0;margin:0;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden}
+li+li{border-top:1px solid #f1f5f9}
+a{display:flex;gap:.85rem;align-items:flex-start;padding:.9rem 1rem;color:inherit;text-decoration:none}
+a:hover{background:#f8fafc}
+.av{flex:none;width:40px;height:40px;border-radius:50%;background:#E3F1EE;color:#0C5E56;font-weight:700;display:flex;align-items:center;justify-content:center}
+.tx{display:flex;flex-direction:column;min-width:0}small{color:#64748b;font-size:.8rem}em{font-style:normal;color:#334155;font-size:.875rem;margin-top:.2rem}
+</style>
+<main><h1>Sign in as a demo user</h1>
+<p>Local demo only, standing in for Google sign-in. Use a private window to be a second person at the same time.</p>
+<ul>${list}</ul></main>`);
     }
 
     const login = url.pathname.match(/^\/login\/([0-9a-f-]{36})$/);
@@ -220,12 +226,23 @@ const vite = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vit
 });
 vite.stdout.on('data', (d) => {
   if (/ready in/.test(d.toString())) {
+    const people = users();
+    const codes = psql(`select name || '|' || invite_code from public.groups order by name`).stdout.trim().split('\n').filter(Boolean)
+      .map((l) => l.split('|'));
+    const w = Math.max(...people.map((u) => u.name.length));
     console.log(`
 ── demo running
-   1. Sign in:  http://localhost:${GATEWAY_PORT}   (pick Arif, Sami, Rafi, Nadia or Tania)
+   1. Sign in:  http://localhost:${GATEWAY_PORT}   (no passwords: pick a person)
    2. App:      http://localhost:${APP_PORT}
-   Data is kept between runs; \`npm run demo -- --reset\` starts over.  Ctrl+C to stop.
-`);
+
+   Demo users
+${people.map((u) => `     ${u.name.padEnd(w)}  ${u.email.padEnd(w + 12)}  ${u.groups || '(no groups)'}`).join('\n')}
+
+   Invite links (for Tania, or anyone)
+${codes.map(([n, c]) => `     ${n.padEnd(16)}  http://localhost:${APP_PORT}/join/${c}`).join('\n')}
+
+   Data is kept between runs; \`npm run demo:reset\` starts over.  Ctrl+C to stop.
+${seedCurrent ? '' : '\n   ⚠ This demo database has older demo data. Run `npm run demo:reset` for the full set.\n'}`);
   }
 });
 const stop = () => { vite.kill(); docker(['stop', REST_NAME, PG], { quiet: true, allowFail: true }); process.exit(0); };

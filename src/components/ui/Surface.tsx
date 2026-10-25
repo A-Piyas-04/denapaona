@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/format';
 
 export function Card({ className, children, ...rest }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
@@ -37,12 +38,13 @@ export function Chip({ selected, onClick, children, className, disabled }: {
       disabled={disabled}
       aria-pressed={selected}
       className={cn(
-        'pressable inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-[15px] font-medium transition-colors',
-        selected ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+        'pressable inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-[15px] font-medium',
+        selected ? 'border-brand bg-brand-soft text-brand-ink' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
         disabled && 'opacity-40',
         className,
       )}
     >
+      {selected && <Check size={15} strokeWidth={2.6} className="-ml-0.5 shrink-0" aria-hidden />}
       {children}
     </button>
   );

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Flag } from 'lucide-react';
+import { Flag, Receipt } from 'lucide-react';
 import { Taka } from './Money';
 import { cn } from '@/lib/format';
 import type { Expense } from '@/lib/types';
@@ -21,9 +21,11 @@ function DateTile({ iso, muted }: { iso: string; muted?: boolean }) {
  * leader actions are labelled, and a voided expense is struck through with who
  * cancelled it — never hidden (B-05#2).  Render inside a ListGroup.
  */
-export function ExpenseRow({ expense: e, groupId, me, name, attribution }: {
+export function ExpenseRow({ expense: e, groupId, me, name, attribution, dateTile = true }: {
   expense: Expense; groupId: string; me: string;
   name: (id: string | null) => string; attribution?: Attribution;
+  /** Off where rows already sit under a date heading. */
+  dateTile?: boolean;
 }) {
   const mine = e.expense_shares?.find((s) => s.user_id === me)?.share_poisha ?? 0;
   const voided = !!e.voided_at;
@@ -39,7 +41,11 @@ export function ExpenseRow({ expense: e, groupId, me, name, attribution }: {
   return (
     <Link to={`/groups/${groupId}/expenses/${e.id}`}
           className="flex min-h-[64px] items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 active:bg-slate-100">
-      <DateTile iso={e.created_at} muted={voided} />
+      {dateTile ? <DateTile iso={e.created_at} muted={voided} /> : (
+        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', voided ? 'bg-slate-50 text-slate-400' : 'bg-slate-100 text-slate-600')} aria-hidden>
+          <Receipt size={20} />
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className={cn('truncate text-[16px] font-medium text-slate-900', voided && 'text-slate-400 line-through')}>{e.description}</span>

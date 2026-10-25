@@ -8,7 +8,9 @@ const FIELD = cn(
 );
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...rest }, ref) => <input ref={ref} className={cn(FIELD, 'h-12 scroll-mt-24', className)} {...rest} />,
+  ({ className, autoComplete = 'off', ...rest }, ref) => (
+    <input ref={ref} autoComplete={autoComplete} className={cn(FIELD, 'h-12 scroll-mt-24', className)} {...rest} />
+  ),
 );
 Input.displayName = 'Input';
 

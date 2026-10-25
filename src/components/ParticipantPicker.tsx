@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Chip } from './ui';
 import { LeaderBadge } from './LeaderBadge';
 
@@ -32,9 +32,7 @@ export function ParticipantPicker({ roster, others, selected, onChange, presets 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Chip selected={everyone} onClick={() => onChange(everyone ? [] : roster.map((p) => p.id))}>
-          {everyone && <Check size={16} aria-hidden />}Everyone
-        </Chip>
+        <Chip selected={everyone} onClick={() => onChange(everyone ? [] : roster.map((p) => p.id))}>Everyone</Chip>
         {roster.map((p) => (
           <Chip key={p.id} selected={set.has(p.id)} onClick={() => toggle(p.id)}>
             {p.name}{p.isLeader && <span className="sr-only"> (leader)</span>}

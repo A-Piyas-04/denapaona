@@ -39,17 +39,19 @@ type RowProps = {
   chevron?: boolean;
   className?: string;
   tone?: 'default' | 'danger' | 'muted';
+  /** Let the title run to two lines instead of truncating. */
+  wrap?: boolean;
   'data-tour'?: string;
   'aria-label'?: string;
 };
 
 /** The workhorse row: leading avatar or icon, two lines of text, a value or chevron. */
-export function ListRow({ leading, title, subtitle, trailing, to, onClick, chevron, className, tone = 'default', ...rest }: RowProps) {
+export function ListRow({ leading, title, subtitle, trailing, to, onClick, chevron, className, tone = 'default', wrap, ...rest }: RowProps) {
   const body = (
     <>
       {leading}
       <span className="min-w-0 flex-1">
-        <span className={cn('block truncate text-[16px] font-medium leading-snug',
+        <span className={cn('block text-[16px] font-medium leading-snug', wrap ? 'line-clamp-2' : 'truncate',
           tone === 'danger' ? 'text-owe' : tone === 'muted' ? 'text-slate-400' : 'text-slate-900')}>{title}</span>
         {subtitle && <span className="mt-0.5 block truncate text-[13px] leading-snug text-slate-500">{subtitle}</span>}
       </span>

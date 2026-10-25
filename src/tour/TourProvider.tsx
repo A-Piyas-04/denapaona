@@ -102,11 +102,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
         onCloseClick: () => stop(),
         onPopoverRender: (pop) => {
           if (!first) {
-            const total = TOUR_STEPS.filter(usable).length - 1;
-            const pos = TOUR_STEPS.slice(1, i + 1).filter(usable).length;
             const progress = document.createElement('p');
             progress.className = 'hn-tour-progress';
-            progress.textContent = `Step ${pos} of ${total}`;
+            progress.textContent = `Step ${i} of ${TOUR_STEPS.length - 1}`;
             pop.title.before(progress);
           }
           if (!isLast) {
@@ -120,7 +118,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
           if (waits && step.hint) {
             const hint = document.createElement('p');
             hint.className = 'hn-tour-hint';
-            hint.textContent = `→ ${step.hint}`;
+            hint.textContent = step.hint;
             pop.description.after(hint);
           }
           pop.closeButton.setAttribute('aria-label', 'Close tour');

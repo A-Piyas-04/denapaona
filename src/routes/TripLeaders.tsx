@@ -25,6 +25,7 @@ export function TripLeaders() {
   const qc = useQueryClient();
   const toast = useToast();
   const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [tab, setTab] = useTabParam('tab', 'leaders', TABS);
 
@@ -60,7 +61,7 @@ export function TripLeaders() {
                          trailing={v.isLeader ? (
                            <Button size="sm" variant="ghost" busy={busy === l.user_id} disabled={leaders.length <= 1}
                                    title={leaders.length <= 1 ? 'A trip needs at least one leader.' : undefined}
-                                   onClick={() => run(l.user_id, () => rpc.removeTripLeader(tripId, l.user_id), `${v.name(l.user_id)} is no longer a leader`)}>
+                                   onClick={() => setRemoving(l.user_id)}>
                              Remove
                            </Button>
                          ) : undefined} />
@@ -74,7 +75,7 @@ export function TripLeaders() {
         ) : (
           <ListGroup>
             {log.map((l) => (
-              <ListRow key={l.id}
+              <ListRow key={l.id} wrap
                        title={{
                          appointed: `${v.name(l.actor_id, { you: true })} made ${v.name(l.user_id, { you: true })} a leader`,
                          removed: `${v.name(l.actor_id, { you: true })} removed ${v.name(l.user_id, { you: true })}`,
@@ -86,6 +87,21 @@ export function TripLeaders() {
           </ListGroup>
         )}
       </div>
+
+      <Sheet open={!!removing} onClose={() => setRemoving(null)}
+             title={removing ? `Remove ${v.name(removing, { you: true }) === 'You' ? 'yourself' : v.name(removing)} as leader?` : ''}
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => setRemoving(null)}>Cancel</Button>
+                 <Button variant="danger" busy={busy === removing} onClick={() => {
+                   const id = removing!;
+                   setRemoving(null);
+                   void run(id, () => rpc.removeTripLeader(tripId, id), `${v.name(id)} is no longer a leader`);
+                 }}>Remove</Button>
+               </div>
+             }>
+        <p className="text-[15px] text-slate-700">They lose leader powers on this trip straight away. Everyone sees it in the history.</p>
+      </Sheet>
 
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a leader">
         <p className="mb-4 text-[15px] text-slate-600">They can add, cancel and settle on this trip without approval. Never move anyone’s debt.</p>

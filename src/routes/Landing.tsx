@@ -21,7 +21,7 @@ export function Landing() {
     <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-white px-6 pb-8 pt-14 sm:border-x sm:border-slate-200/70">
       <div className="flex-1">
         <img src="/icon.svg" alt="" width={56} height={56} className="rounded-2xl" />
-        <h1 className="mt-8 text-[34px] font-semibold leading-tight text-slate-900">{t('app.name')}</h1>
+        <h1 className="mt-8 text-[34px] font-semibold leading-tight text-slate-900" translate="no">{t('app.name')}</h1>
         <p className="mt-3 max-w-[20rem] text-[17px] leading-relaxed text-slate-600">{t('app.tagline')}</p>
         <ul className="mt-12 space-y-6">
           {FEATURES.map(({ icon: Icon, title, body }) => (

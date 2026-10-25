@@ -19,6 +19,11 @@ export function Sheet({ open, onClose, title, children, footer }: {
     window.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // The page behind a modal sheet is out of reach for keyboard and screen readers.
+    const root = document.getElementById('root');
+    const wasInert = root?.inert ?? false;
+    const wasHidden = root ? root.getAttribute('aria-hidden') : null;
+    if (root) { root.inert = true; root.setAttribute('aria-hidden', 'true'); }
     const prevFocus = document.activeElement as HTMLElement | null;
     const t = setTimeout(() => {
       if (panel.current && !panel.current.contains(document.activeElement)) panel.current.focus();
@@ -26,6 +31,10 @@ export function Sheet({ open, onClose, title, children, footer }: {
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
+      if (root) {
+        root.inert = wasInert;
+        if (wasHidden === null) root.removeAttribute('aria-hidden'); else root.setAttribute('aria-hidden', wasHidden);
+      }
       clearTimeout(t);
       prevFocus?.focus?.();
     };
@@ -41,7 +50,7 @@ export function Sheet({ open, onClose, title, children, footer }: {
           <h2 id={id} className="min-w-0 flex-1 text-lg font-semibold text-slate-900">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2 h-9 w-9 text-slate-500"><X size={20} /></IconButton>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-1">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-1">{children}</div>
         {footer && (
           <div className="shrink-0 border-t border-slate-100 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">{footer}</div>
         )}

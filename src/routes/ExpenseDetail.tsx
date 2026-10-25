@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { AppShell, SectionTitle } from '@/components/AppShell';
-import { Badge, Button, Card, Field, Sheet, Textarea } from '@/components/ui';
-import { ErrorState, ListSkeleton } from '@/components/States';
-import { Taka } from '@/components/Money';
+import { Ban, Calendar, Flag, Map as MapIcon, RotateCcw, UserRound, Wallet } from 'lucide-react';
+import { AppShell } from '@/components/AppShell';
+import { Avatar, Badge, Banner, Button, Field, IconTile, ListGroup, ListRow, MoreMenu, Section, Sheet, Textarea } from '@/components/ui';
+import { ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
@@ -13,7 +13,7 @@ import { useTrip, isLeaderNow } from '@/hooks/useTrips';
 import { supabase } from '@/lib/supabase';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
-import { dateTime } from '@/lib/format';
+import { dateTime, cn } from '@/lib/format';
 import { formatTaka, splitEvenly } from '@/lib/money';
 import type { Proposal } from '@/lib/types';
 
@@ -48,7 +48,7 @@ export function ExpenseDetail() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (expense.isLoading) return <AppShell title="Expense" back><ListSkeleton /></AppShell>;
+  if (expense.isLoading) return <AppShell title="Expense" back><HeroSkeleton /><ListSkeleton /></AppShell>;
   if (expense.error || !expense.data) return <AppShell title="Expense" back><ErrorState error={expense.error} /></AppShell>;
   const e = expense.data;
   const a = attribution.data?.get(e.id);
@@ -61,6 +61,7 @@ export function ExpenseDetail() {
   const leader = !!e.trip_id && isLeaderNow(trip.data, me);
   const myDispute = e.entry_disputes?.find((d) => d.raised_by === me && d.status === 'open');
   const openDisputes = e.entry_disputes?.filter((d) => d.status === 'open') ?? [];
+  const tripClosed = !!e.trip_id && trip.data?.trip.status === 'closed';
 
   async function submit() {
     if (!reason.trim()) return;
@@ -68,16 +69,16 @@ export function ExpenseDetail() {
     try {
       if (action === 'void') {
         await rpc.voidExpense(e.id, reason.trim());
-        toast('Cancelled. Now enter the corrected expense.');
+        toast('Expense cancelled. Now enter the corrected one.');
         void qc.invalidateQueries();
         navigate(`/trips/${e.trip_id}/add?from=${e.id}`, { replace: true });
       } else if (action === 'propose') {
         const pid = await rpc.proposeVoid(e.id, reason.trim());
-        toast('Sent to everyone in the split for approval');
+        toast('Sent for approval to everyone in the split');
         navigate(`/proposals/${pid}`);
       } else if (action === 'dispute') {
         await rpc.raiseDispute(e.id, reason.trim());
-        toast(e.trip_id ? 'Flagged for the trip leaders to review' : 'Flagged — everyone in the group can see it', 'info');
+        toast(e.trip_id ? 'Flagged for the trip leaders' : 'Flagged. Everyone in the group can see it.', 'info');
         void qc.invalidateQueries({ queryKey: ['expense', e.id] });
       }
       setAction(null); setReason('');
@@ -88,111 +89,113 @@ export function ExpenseDetail() {
     }
   }
 
-  return (
-    <AppShell title={e.description} back>
-      <Card>
-        <div className="flex items-start justify-between">
-          <div>
-            <p className={voided ? 'text-2xl font-semibold text-slate-400 line-through' : 'text-2xl font-semibold'}>
-              <Taka poisha={e.total_poisha} />
-            </p>
-            <p className="mt-1 text-sm text-slate-600">paid by <strong>{name(e.payer_id, { you: true })}</strong></p>
-            <p className="text-sm text-slate-600">
-              added by <strong>{name(e.created_by, { you: true })}</strong>{a?.entered_by_leader && ' (trip leader)'} · {dateTime(e.created_at)}
-            </p>
-            {e.trip_id && trip.data && (
-              <Link to={`/trips/${e.trip_id}`} className="text-sm text-brand">on {trip.data.trip.name}</Link>
-            )}
-          </div>
-          {voided && <Badge>cancelled</Badge>}
-        </div>
-        {voided && (
-          <p className="mt-3 rounded-lg bg-slate-100 p-2 text-sm text-slate-700">
-            {a?.voided_by_agreement ? 'Cancelled by agreement' : `Voided by ${name(e.voided_by)}${a?.voided_by_leader ? ' (trip leader)' : ''}`}
-            {' '}— “{e.void_reason}”. It counts for nothing now, and both the original and the cancellation stay in history.
-          </p>
-        )}
-      </Card>
+  const people = shares.length + (shares.some((s) => s.user_id === e.payer_id) ? 0 : 1);
 
-      <SectionTitle>Split {shares.length} ways {isEven ? 'equally' : '— entered by hand'}</SectionTitle>
-      <Card className="p-3">
-        <ul className="divide-y divide-slate-100">
-          {shares.map((s) => (
-            <li key={s.user_id} className="flex justify-between py-1.5 text-[15px]">
-              <span>{name(s.user_id, { you: true })}</span>
-              <span className="tabular-nums">
-                {formatTaka(s.share_poisha)}
-                {isEven && s.share_poisha > minShare && <span className="ml-1 text-xs text-slate-500">+1 poisha</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
-        {isEven && shares.some((s) => s.share_poisha > minShare) && (
-          <p className="mt-2 text-xs text-slate-500">
-            {formatTaka(e.total_poisha)} didn’t divide evenly. Leftover poisha go to people in a fixed, repeatable order (by account id) — not at random, not targeted.
-          </p>
+  return (
+    <AppShell title="Expense" back action={!voided ? (
+      <MoreMenu title={e.description} items={[
+        { label: 'Void and re-enter', icon: RotateCcw, tone: 'danger', onClick: () => setAction('void'), hidden: !leader,
+          hint: 'Leaders fix mistakes straight away' },
+        { label: 'Propose cancelling', icon: Ban, onClick: () => setAction('propose'), hidden: leader || !involved || !!pendingVoid.data,
+          hint: 'Everyone in the split must agree' },
+        { label: 'This doesn’t look right', icon: Flag, onClick: () => setAction('dispute'), hidden: !!myDispute,
+          hint: 'Flags it. No balance changes.' },
+      ]} />
+    ) : undefined}>
+      <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-5 text-center">
+        <p className={cn('text-[16px] font-medium', voided ? 'text-slate-400 line-through' : 'text-slate-600')}>{e.description}</p>
+        <p className={cn('mt-1 font-display text-[36px] font-semibold tnum', voided ? 'text-slate-400 line-through' : 'text-slate-900')}>
+          {formatTaka(e.total_poisha)}
+        </p>
+        {voided && <Badge className="mt-2">Cancelled</Badge>}
+      </div>
+
+      {voided && (
+        <Banner icon={Ban}>
+          {a?.voided_by_agreement ? 'Cancelled by agreement' : `Cancelled by ${name(e.voided_by)}${a?.voided_by_leader ? ' (trip leader)' : ''}`}: “{e.void_reason}”. It no longer counts.
+        </Banner>
+      )}
+      {!voided && pendingVoid.data && (
+        <Banner tone="pending" icon={Ban} to={`/proposals/${pendingVoid.data.id}`}>A cancellation is waiting for approval</Banner>
+      )}
+
+      <ListGroup>
+        <ListRow leading={<IconTile><Wallet size={20} /></IconTile>} title={name(e.payer_id, { you: true })} subtitle="Paid by" />
+        <ListRow leading={<IconTile><UserRound size={20} /></IconTile>}
+                 title={<>{name(e.created_by, { you: true })}{a?.entered_by_leader && <span className="font-normal text-slate-500"> (trip leader)</span>}</>}
+                 subtitle="Added by" />
+        <ListRow leading={<IconTile><Calendar size={20} /></IconTile>} title={dateTime(e.created_at)} subtitle="Date" />
+        {e.trip_id && trip.data && (
+          <ListRow to={`/trips/${e.trip_id}`} leading={<IconTile tone="brand"><MapIcon size={20} /></IconTile>} title={trip.data.trip.name} subtitle="Trip" />
         )}
-      </Card>
+      </ListGroup>
+
+      <Section title={`Split ${shares.length} ways, ${isEven ? 'equally' : 'by hand'}`}>
+        <ListGroup>
+          {shares.map((s) => (
+            <ListRow key={s.user_id} leading={<Avatar name={name(s.user_id)} seed={s.user_id} />} title={name(s.user_id, { you: true })}
+                     trailing={
+                       <span className="text-[15px] font-medium text-slate-900 tnum">
+                         {formatTaka(s.share_poisha)}
+                         {isEven && s.share_poisha > minShare && <span className="ml-1 text-xs font-normal text-slate-500">+1 poisha</span>}
+                       </span>
+                     } />
+          ))}
+        </ListGroup>
+        {isEven && shares.some((s) => s.share_poisha > minShare) && (
+          <p className="mt-2 px-1 text-[13px] text-slate-500">Leftover poisha go to people in a fixed order, never at random.</p>
+        )}
+      </Section>
 
       {openDisputes.length > 0 && (
-        <>
-          <SectionTitle>Questioned</SectionTitle>
+        <Section title="Questioned">
           <div className="space-y-2">
             {openDisputes.map((d) => (
-              <Card key={d.id} className="border-amber-200 bg-amber-50 p-3 text-sm">
-                <p><strong>{name(d.raised_by, { you: true })}</strong>: “{d.reason}”</p>
-                <p className="mt-1 text-xs text-amber-800">A flag changes no balance. {e.trip_id ? 'A trip leader can void and re-enter it.' : 'It can be cancelled by agreement.'}</p>
+              <div key={d.id} className="rounded-2xl bg-pending-soft px-4 py-3 text-[15px] text-slate-800">
+                <p><span className="font-semibold">{name(d.raised_by, { you: true })}:</span> “{d.reason}”</p>
+                <p className="mt-1 text-[13px] text-pending">A flag changes no balance.</p>
                 {d.raised_by === me && (
-                  <Button size="sm" variant="ghost" className="mt-1" onClick={async () => {
+                  <Button size="sm" variant="ghost" className="-ml-2 mt-1" onClick={async () => {
                     try { await rpc.withdrawDispute(d.id); void qc.invalidateQueries({ queryKey: ['expense', e.id] }); }
                     catch (err) { toast(errorMessage(err), 'error'); }
                   }}>Withdraw my flag</Button>
                 )}
-              </Card>
+              </div>
             ))}
           </div>
-        </>
+        </Section>
       )}
 
       {!voided && (
-        <div className="mt-6 space-y-2">
-          {pendingVoid.data && (
-            <Link to={`/proposals/${pendingVoid.data.id}`} className="block rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
-              A cancellation is waiting for approval →
-            </Link>
-          )}
-          {leader && <Button block variant="danger" onClick={() => setAction('void')}>Void and re-enter</Button>}
-          {!leader && involved && !pendingVoid.data && (
-            <Button block variant="outline" onClick={() => setAction('propose')}>Propose cancelling this</Button>
-          )}
-          {!leader && e.trip_id && trip.data?.trip.status === 'closed' && (
-            <p className="text-center text-xs text-slate-500">This trip is closed — corrections now need everyone in the split to agree.</p>
-          )}
+        <div className="space-y-1 text-center">
+          {tripClosed && !leader && <p className="text-[13px] text-slate-500">This trip is closed. Corrections need everyone in the split to agree.</p>}
           {!myDispute && (
-            <button className="block w-full py-2 text-center text-sm text-slate-500 underline decoration-dotted" onClick={() => setAction('dispute')}>
-              This doesn’t look right
+            <button type="button" className="inline-flex items-center gap-1.5 py-2 text-[14px] font-medium text-slate-500 hover:text-slate-800" onClick={() => setAction('dispute')}>
+              <Flag size={15} aria-hidden /> This doesn’t look right
             </button>
           )}
         </div>
       )}
 
       <Sheet open={action !== null} onClose={() => setAction(null)}
-             title={action === 'void' ? 'Void and re-enter' : action === 'propose' ? 'Propose cancelling' : 'What looks wrong?'}>
-        <p className="mb-3 text-sm text-slate-600">
-          {action === 'void' && 'This appends a cancellation — nothing is edited or deleted — and everyone affected sees who did it and why. You’ll then enter the corrected expense.'}
-          {action === 'propose' && `Everyone in the split must approve (${shares.length + (shares.some((s) => s.user_id === e.payer_id) ? 0 : 1)} people). Until then the expense still counts.`}
-          {action === 'dispute' && (e.trip_id ? 'Your flag notifies the trip leaders and appears beside this expense. It doesn’t change any balance.' : 'Your flag appears beside this expense for everyone. It doesn’t change any balance.')}
+             title={action === 'void' ? 'Void and re-enter' : action === 'propose' ? 'Propose cancelling' : 'What looks wrong?'}
+             footer={
+               <div className="grid grid-cols-2 gap-2">
+                 <Button variant="secondary" onClick={() => setAction(null)}>Cancel</Button>
+                 <Button busy={busy} disabled={!reason.trim()} variant={action === 'void' ? 'danger' : 'primary'} onClick={submit}>
+                   {action === 'void' ? 'Void it' : action === 'propose' ? 'Send' : 'Flag it'}
+                 </Button>
+               </div>
+             }>
+        <p className="mb-4 text-[15px] text-slate-600">
+          {action === 'void' && 'Nothing is erased. Everyone sees who cancelled it and why. You then enter the right one.'}
+          {action === 'propose' && `All ${people} people in the split must approve. Until then it still counts.`}
+          {action === 'dispute' && (e.trip_id ? 'The trip leaders are told. No balance changes.' : 'Everyone sees your flag beside it. No balance changes.')}
         </p>
         <Field label="Reason" htmlFor="action-reason">
           <Textarea id="action-reason" autoFocus maxLength={300} value={reason} onChange={(ev) => setReason(ev.target.value)}
-                    placeholder={action === 'dispute' ? 'I didn’t eat at this dinner' : 'typed 1200, was 1100'} />
+                    placeholder={action === 'dispute' ? 'I didn’t eat at this dinner' : 'Typed 1200, was 1100'} />
         </Field>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button variant="secondary" onClick={() => setAction(null)}>Cancel</Button>
-          <Button busy={busy} disabled={!reason.trim()} variant={action === 'void' ? 'danger' : 'primary'} onClick={submit}>
-            {action === 'void' ? 'Void it' : action === 'propose' ? 'Send' : 'Flag it'}
-          </Button>
-        </div>
       </Sheet>
     </AppShell>
   );

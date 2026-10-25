@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CircleUserRound, Inbox as InboxIcon, Users, WifiOff } from 'lucide-react';
 import { useInbox } from '@/hooks/useProposals';
 import { useOnline } from '@/hooks/useBrowser';
@@ -27,6 +27,9 @@ export function AppShell({ title, back, action, children, nav = true, fab }: {
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-canvas sm:border-x sm:border-slate-200/70"
          style={{ '--nav-h': nav ? '64px' : '0px' } as CSSProperties}>
+      <a href="#main" className="sr-only z-50 rounded-xl bg-white px-4 py-2 font-semibold text-brand shadow-float focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+        Skip to content
+      </a>
       {title !== undefined && (
         <header className={cn('sticky top-0 z-30 flex items-center gap-1 border-b border-slate-200/70 bg-canvas/90 px-2 backdrop-blur-md',
                               root ? 'h-16 pl-5' : 'h-14')}>
@@ -49,7 +52,7 @@ export function AppShell({ title, back, action, children, nav = true, fab }: {
           <WifiOff size={15} aria-hidden /> {t('offline.banner')}
         </div>
       )}
-      <main className={cn('flex flex-1 flex-col gap-6 px-4 pt-5', nav ? (fab ? 'pb-40' : 'pb-24') : 'pb-6')}>{children}</main>
+      <main id="main" tabIndex={-1} className={cn('flex flex-1 flex-col gap-6 px-4 pt-5 outline-none', nav ? (fab ? 'pb-40' : 'pb-24') : 'pb-6')}>{children}</main>
       {fab}
       {nav && <BottomNav />}
     </div>
@@ -91,18 +94,4 @@ function BottomNav() {
       ))}
     </nav>
   );
-}
-
-/** Kept for screens that still use the older name; prefer `Section` from ui. */
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between px-1">
-      <h2 className="text-[15px] font-semibold text-slate-900">{children}</h2>
-      {action}
-    </div>
-  );
-}
-
-export function TextLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className="text-sm font-semibold text-brand hover:underline">{children}</Link>;
 }

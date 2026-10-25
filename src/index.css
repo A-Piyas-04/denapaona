@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 @layer base {
-  html { -webkit-tap-highlight-color: transparent; }
+  html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   body {
     @apply bg-canvas font-sans text-[16px] leading-normal text-slate-900 antialiased;
     overflow-x: hidden;
     font-feature-settings: 'kern';
   }
-  h1, h2, h3 { @apply font-display tracking-[-0.01em]; }
+  @media (min-width: 640px) { body { background-color: #E9EDEC; } }
+  h1, h2, h3 { @apply font-display tracking-[-0.01em]; text-wrap: balance; }
   /* Stories §12.5: the focused field scrolls into view above the keyboard. */
   input, textarea { scroll-margin-bottom: 7rem; }
   :focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 2px; }
@@ -17,7 +18,11 @@
 
 @layer utilities {
   .tnum { font-variant-numeric: tabular-nums; }
-  .pressable { transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .pressable {
+    transition-property: transform, background-color, border-color, color, box-shadow;
+    transition-duration: 140ms;
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
   .pressable:active:not(:disabled) { transform: scale(0.97); }
   .scrollbar-none { scrollbar-width: none; }
   .scrollbar-none::-webkit-scrollbar { display: none; }
@@ -50,6 +55,7 @@
 .driver-popover.hn-tour .driver-popover-close-btn {
   @apply right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700;
 }
+.driver-popover.hn-tour .driver-popover-close-btn:focus-visible { outline: none; @apply bg-slate-100 text-slate-700; }
 .driver-popover.hn-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: white; }
 .driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: white; }
 .driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: white; }

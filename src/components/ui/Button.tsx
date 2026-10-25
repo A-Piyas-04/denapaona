@@ -27,7 +27,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const buttonClass = (variant: Variant = 'primary', size: Size = 'md', block?: boolean, className?: string) => cn(
   'pressable inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl font-semibold',
-  'transition-colors disabled:cursor-not-allowed',
+  'disabled:cursor-not-allowed',
   VARIANTS[variant], SIZES[size], block && 'w-full', className,
 );
 
@@ -64,7 +64,7 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
       aria-label={label}
       title={label}
       className={cn(
-        'pressable inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors',
+        'pressable inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
         tone === 'brand' ? 'bg-brand text-white hover:bg-brand-hover' : 'text-slate-700 hover:bg-slate-200/70',
         className,
       )}

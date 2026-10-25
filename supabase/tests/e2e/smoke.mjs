@@ -17,7 +17,10 @@ async function user(id, token, label) {
     expires_at: Math.floor(Date.now() / 1000) + 86400,
     user: { id, aud: 'authenticated', role: 'authenticated', email: `${label}@test.local`, app_metadata: {}, user_metadata: {} },
   };
-  await ctx.addInitScript(([s]) => localStorage.setItem('sb-localhost-auth-token', s), [JSON.stringify(session)]);
+  await ctx.addInitScript(([s, uid]) => {
+    localStorage.setItem('sb-localhost-auth-token', s);
+    localStorage.setItem(`hn.tour.done.${uid}`, '1'); // the first-run tour would cover the page
+  }, [JSON.stringify(session), id]);
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${label}: ${e.message}`));
   page.on('console', (m) => {
@@ -77,8 +80,10 @@ try {
   await rafi.goto(groupUrl + '/add');
   await rafi.getByLabel('Amount (৳)').fill('1000');
   await rafi.getByLabel('What was it?').fill('Hotel for Arif');
+  await rafi.getByRole('button', { name: /^Split/ }).click();     // open the split sheet
   await rafi.getByRole('button', { name: /Everyone/ }).click();   // clear
-  await rafi.locator('button[aria-pressed]', { hasText: /^Arif/ }).last().click(); // participant chip, not payer
+  await rafi.locator('button[aria-pressed]', { hasText: /^Arif/ }).last().click();
+  await rafi.getByRole('button', { name: 'Done', exact: true }).click();
   await rafi.getByRole('button', { name: /Save ৳1,000.00/ }).click();
   await expectText(rafi, 'Add expense');
   step('hotel recorded');
@@ -126,6 +131,7 @@ try {
   await sami.goto(groupUrl + '/settle');
   await expectText(sami, 'You pay');
   await shot(sami, '11-settle');
+  await sami.getByRole('button', { name: /You pay/ }).first().click();
   await sami.getByRole('button', { name: 'I paid this' }).first().click();
   await expectText(sami, 'Everyone must agree');
   const settleUrl = sami.url();
@@ -144,7 +150,9 @@ try {
   await arif.getByRole('link', { name: /Add expense/ }).click();
   await arif.getByLabel('Amount (৳)').fill('100');
   await arif.getByLabel('What was it?').fill('Auto rickshaw');
+  await arif.getByRole('button', { name: /^Split/ }).click();
   await expectText(arif, '+1 poisha');
+  await arif.getByRole('button', { name: 'Done', exact: true }).click();
   await arif.getByRole('button', { name: /Save ৳100.00/ }).click();
   await expectText(arif, 'Auto rickshaw');
   await shot(arif, '12-trip-dashboard');
