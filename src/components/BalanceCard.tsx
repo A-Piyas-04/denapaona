@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Card, Skeleton } from './ui';
-import { Balance, Taka } from './Money';
+import { Scale } from 'lucide-react';
+import { Avatar, ListGroup, ListRow, Section, StatHero } from './ui';
+import { HeroSkeleton, ListSkeleton, EmptyState } from './States';
+import { Taka } from './Money';
 import { useT } from '@/lib/i18n';
-import { sum } from '@/lib/money';
+import { formatTaka, sum } from '@/lib/money';
+import { cn } from '@/lib/format';
 
 export interface PairBalance {
   otherId: string;
@@ -11,62 +14,80 @@ export interface PairBalance {
   poisha: number;
 }
 
+const whyPath = (groupId: string, otherId: string, tripId?: string) =>
+  `/explain/${groupId}/${otherId}${tripId ? `?trip=${tripId}` : ''}`;
+
+function WhyLink({ to, className }: { to: string; className?: string }) {
+  const t = useT();
+  return (
+    <Link to={to} className={cn('inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-[13px] font-semibold text-slate-700 hover:bg-brand-soft hover:text-brand-ink', className)}>
+      {t('balance.why')}
+    </Link>
+  );
+}
+
 /**
- * Story B-04: one headline figure plus the per-person breakdown, grouped into
- * "You owe" and "You're owed".  The headline is the sum of the same integers
- * shown below it, so the two can never disagree by even a poisha (B-04#3).
- * Every figure carries a quiet "Why?" (§13.3).
+ * Story B-04: the headline figure.  It is the sum of the same integers shown in
+ * the breakdown, so the two can never disagree by even a poisha (B-04#3).
  */
-export function BalanceCard({ groupId, tripId, pairs, loading, scopeNote }: {
-  groupId: string; tripId?: string; pairs: PairBalance[] | undefined; loading?: boolean; scopeNote?: string;
+export function BalanceHero({ groupId, tripId, pairs, loading, onShowBreakdown, scopeLabel }: {
+  groupId: string; tripId?: string; pairs: PairBalance[] | undefined; loading?: boolean;
+  onShowBreakdown?: () => void; scopeLabel?: string;
 }) {
   const t = useT();
-  if (loading || !pairs) {
-    return (
-      <Card className="space-y-3">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-12 w-full" />
-      </Card>
-    );
-  }
+  if (loading || !pairs) return <HeroSkeleton />;
   const net = sum(pairs.map((p) => p.poisha));
+  const owing = pairs.filter((p) => p.poisha !== 0);
+  const label = net > 0 ? t('balance.youreOwed') : net < 0 ? t('balance.youOwe') : (scopeLabel ?? 'Your balance');
+  const sub = owing.length === 0 ? 'Nobody owes anybody here.'
+    : owing.length === 1 ? (owing[0]!.poisha > 0 ? `${owing[0]!.name} owes you` : `You owe ${owing[0]!.name}`)
+    : `Across ${owing.length} people`;
+  const action = owing.length === 1
+    ? <WhyLink to={whyPath(groupId, owing[0]!.otherId, tripId)} />
+    : owing.length > 1 && onShowBreakdown
+      ? <button type="button" onClick={onShowBreakdown} className="inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-[13px] font-semibold text-slate-700 hover:bg-brand-soft hover:text-brand-ink">See breakdown</button>
+      : undefined;
+  return (
+    <StatHero data-tour="balance-hero" label={label} tone={net > 0 ? 'owed' : net < 0 ? 'owe' : 'neutral'}
+              value={net === 0 ? <span className="text-slate-400">{t('balance.allSettled')}</span>
+                : <span className={net > 0 ? 'text-owed' : 'text-owe'}>{formatTaka(Math.abs(net))}</span>}
+              sub={sub} action={action} />
+  );
+}
+
+/** Per-person rows, grouped into "You owe" and "You're owed", each with its "Why?" (§13.3). */
+export function BalanceBreakdown({ groupId, tripId, pairs, loading }: {
+  groupId: string; tripId?: string; pairs: PairBalance[] | undefined; loading?: boolean;
+}) {
+  const t = useT();
+  if (loading || !pairs) return <ListSkeleton rows={2} />;
   const owe = pairs.filter((p) => p.poisha < 0).sort((a, b) => a.poisha - b.poisha);
   const owed = pairs.filter((p) => p.poisha > 0).sort((a, b) => b.poisha - a.poisha);
-  const why = (otherId: string) =>
-    `/explain/${groupId}/${otherId}${tripId ? `?trip=${tripId}` : ''}`;
-
+  if (owe.length === 0 && owed.length === 0) {
+    return <EmptyState icon={Scale} title={t('balance.allSettled')} body="Nobody owes anybody here." />;
+  }
   return (
-    <Card>
-      <p className="text-sm text-slate-500">
-        {net === 0 ? (scopeNote ?? 'Your position') : net > 0 ? t('balance.youreOwed') : t('balance.youOwe')}
-      </p>
-      <p className="mt-0.5 text-3xl">
-        <Balance poisha={net} settledText={t('balance.allSettled')} className={net === 0 ? 'text-2xl font-semibold' : ''} />
-      </p>
-      {net === 0 && pairs.length === 0 && (
-        <p className="mt-1 text-sm text-slate-500">Nobody owes anybody here. ✓</p>
-      )}
-      {[{ label: t('balance.youOwe'), rows: owe, prefix: 'to' }, { label: t('balance.youreOwed'), rows: owed, prefix: 'from' }]
+    <div className="space-y-5">
+      {[{ label: t('balance.youOwe'), rows: owe }, { label: t('balance.youreOwed'), rows: owed }]
         .filter((g) => g.rows.length > 0)
         .map((g) => (
-          <div key={g.label} className="mt-4">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{g.label}</p>
-            <ul className="divide-y divide-slate-100">
+          <Section key={g.label} title={g.label}>
+            <ListGroup>
               {g.rows.map((p) => (
-                <li key={p.otherId} className="flex items-center justify-between py-2">
-                  <span className="text-[15px] text-slate-800">{g.prefix} {p.name}</span>
-                  <span className="flex items-center gap-3">
-                    <Taka poisha={Math.abs(p.poisha)} className={p.poisha < 0 ? 'font-medium text-owe' : 'font-medium text-owed'} />
-                    <Link to={why(p.otherId)} className="text-xs font-medium text-slate-500 underline decoration-dotted underline-offset-2 hover:text-brand">
-                      {t('balance.why')}
-                    </Link>
-                  </span>
-                </li>
+                <ListRow key={p.otherId}
+                         leading={<Avatar name={p.name} seed={p.otherId} />}
+                         title={p.name}
+                         subtitle={p.poisha < 0 ? 'You owe them' : 'Owes you'}
+                         trailing={
+                           <span className="flex items-center gap-2.5">
+                             <Taka poisha={Math.abs(p.poisha)} className={cn('text-[16px] font-semibold', p.poisha < 0 ? 'text-owe' : 'text-owed')} />
+                             <WhyLink to={whyPath(groupId, p.otherId, tripId)} />
+                           </span>
+                         } />
               ))}
-            </ul>
-          </div>
+            </ListGroup>
+          </Section>
         ))}
-    </Card>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { ChevronLeft, CircleUserRound, Inbox as InboxIcon, Users, WifiOff } from 'lucide-react';
 import { useInbox } from '@/hooks/useProposals';
 import { useOnline } from '@/hooks/useBrowser';
 import { useT } from '@/lib/i18n';
@@ -10,34 +11,47 @@ import { cn } from '@/lib/format';
  * not a separate layout).  Bottom nav carries the inbox badge — the baseline
  * notification mechanism (§13.3).
  */
-export function AppShell({ title, back, action, children }: {
-  title?: ReactNode; back?: string | true; action?: ReactNode; children: ReactNode;
+export function AppShell({ title, back, action, children, nav = true, fab }: {
+  title?: ReactNode;
+  back?: string | true;
+  action?: ReactNode;
+  children: ReactNode;
+  /** Hide the bottom nav on focused tasks (forms), so the primary action owns the bottom. */
+  nav?: boolean;
+  fab?: ReactNode;
 }) {
   const navigate = useNavigate();
   const online = useOnline();
   const t = useT();
+  const root = !back;
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-slate-50">
-      {!online && (
-        <div className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-900" role="status">{t('offline.banner')}</div>
-      )}
+    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-canvas sm:border-x sm:border-slate-200/70"
+         style={{ '--nav-h': nav ? '64px' : '0px' } as CSSProperties}>
       {title !== undefined && (
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-slate-200 bg-white/95 px-2 backdrop-blur">
-          {back ? (
+        <header className={cn('sticky top-0 z-30 flex items-center gap-1 border-b border-slate-200/70 bg-canvas/90 px-2 backdrop-blur-md',
+                              root ? 'h-16 pl-5' : 'h-14')}>
+          {back && (
             <button
+              type="button"
               onClick={() => (back === true ? navigate(-1) : navigate(back))}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"
+              className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-800 hover:bg-slate-200/70"
               aria-label="Back"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+              <ChevronLeft size={24} aria-hidden />
             </button>
-          ) : <span className="w-2" />}
-          <h1 className="min-w-0 flex-1 truncate text-[17px] font-semibold text-slate-900">{title}</h1>
-          {action}
+          )}
+          <h1 className={cn('min-w-0 flex-1 truncate font-semibold text-slate-900', root ? 'text-[24px]' : 'text-[17px]')}>{title}</h1>
+          {action && <div className="flex shrink-0 items-center gap-1">{action}</div>}
         </header>
       )}
-      <main className="flex-1 px-4 pb-28 pt-4">{children}</main>
-      <BottomNav />
+      {!online && (
+        <div className="flex items-center justify-center gap-2 bg-pending-soft px-4 py-2 text-[13px] font-medium text-pending" role="status">
+          <WifiOff size={15} aria-hidden /> {t('offline.banner')}
+        </div>
+      )}
+      <main className={cn('flex flex-1 flex-col gap-6 px-4 pt-5', nav ? (fab ? 'pb-40' : 'pb-24') : 'pb-6')}>{children}</main>
+      {fab}
+      {nav && <BottomNav />}
     </div>
   );
 }
@@ -46,43 +60,49 @@ function BottomNav() {
   const inbox = useInbox();
   const t = useT();
   const count = inbox.data?.length ?? 0;
-  const item = 'flex flex-1 flex-col items-center justify-center gap-0.5 text-xs';
-  const cls = ({ isActive }: { isActive: boolean }) => cn(item, isActive ? 'text-brand' : 'text-slate-500');
+  const items = [
+    { to: '/groups', label: t('nav.groups'), icon: Users, tour: 'nav-groups' },
+    { to: '/proposals', label: t('nav.inbox'), icon: InboxIcon, tour: 'nav-inbox', badge: count },
+    { to: '/me', label: t('nav.me'), icon: CircleUserRound, tour: 'nav-me' },
+  ];
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto flex h-16 max-w-app border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
-      <NavLink to="/groups" className={cls}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5" /><circle cx="17" cy="9" r="2.5" /><path d="M16 14.5c2.6.2 4.6 2 5.5 5" /></svg>
-        {t('nav.groups')}
-      </NavLink>
-      <NavLink to="/proposals" className={cls}>
-        <span className="relative">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 13h4l2 3h4l2-3h4" /><path d="M5 5h14l1 8v6H4v-6z" /></svg>
-          {count > 0 && (
-            <span className="absolute -right-2.5 -top-1.5 min-w-[18px] rounded-full bg-owe px-1 text-center text-[11px] font-semibold leading-[18px] text-white"
-                  aria-label={`${count} waiting for you`}>
-              {count > 9 ? '9+' : count}
-            </span>
+    <nav aria-label="Main"
+         className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-app border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-nav backdrop-blur-md">
+      {items.map(({ to, label, icon: Icon, tour, badge }) => (
+        <NavLink key={to} to={to} data-tour={tour}
+                 className={({ isActive }) => cn('flex h-16 flex-1 flex-col items-center justify-center gap-1 text-[12px] font-semibold',
+                   isActive ? 'text-brand' : 'text-slate-500 hover:text-slate-800')}>
+          {({ isActive }) => (
+            <>
+              <span className={cn('relative flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200',
+                                  isActive && 'bg-brand-soft')}>
+                <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} aria-hidden />
+                {!!badge && (
+                  <span className="absolute right-1.5 top-0 min-w-[18px] rounded-full bg-owe px-1 text-center text-[11px] font-bold leading-[18px] text-white ring-2 ring-white"
+                        aria-label={`${badge} waiting for you`}>
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
+              {label}
+            </>
           )}
-        </span>
-        {t('nav.inbox')}
-      </NavLink>
-      <NavLink to="/me" className={cls}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>
-        {t('nav.me')}
-      </NavLink>
+        </NavLink>
+      ))}
     </nav>
   );
 }
 
+/** Kept for screens that still use the older name; prefer `Section` from ui. */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-2 mt-6 flex items-center justify-between">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{children}</h2>
+    <div className="flex items-center justify-between px-1">
+      <h2 className="text-[15px] font-semibold text-slate-900">{children}</h2>
       {action}
     </div>
   );
 }
 
 export function TextLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className="text-sm font-medium text-brand hover:underline">{children}</Link>;
+  return <Link to={to} className="text-sm font-semibold text-brand hover:underline">{children}</Link>;
 }
