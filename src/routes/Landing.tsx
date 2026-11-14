@@ -7,7 +7,7 @@ import { Button } from '@/components/ui';
 const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Receipt, title: 'Split any bill', body: 'Equally or item by item, exact to the poisha.' },
   { icon: ShieldCheck, title: 'Agree before it changes', body: 'Debts only move when everyone involved says yes.' },
-  { icon: SearchCheck, title: 'See why you owe', body: 'Tap “Why?” on any balance to follow the maths.' },
+  { icon: SearchCheck, title: 'See the history', body: 'Tap History on any person to follow every step.' },
 ];
 
 export function Landing() {
@@ -18,10 +18,10 @@ export function Landing() {
   if (!loading && userId) return <Navigate to="/groups" replace />;
   const joining = from?.startsWith('/join');
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-white px-6 pb-8 pt-14 sm:border-x sm:border-slate-200/70">
+    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-gradient-to-b from-white via-white to-brand-soft/30 px-6 pb-8 pt-14 sm:border-x sm:border-slate-200/70">
       <div className="flex-1">
-        <img src="/icon.svg" alt="" width={56} height={56} className="rounded-2xl" />
-        <h1 className="mt-8 text-[34px] font-semibold leading-tight text-slate-900" translate="no">{t('app.name')}</h1>
+        <img src="/icon.svg" alt="" width={56} height={56} className="rounded-2xl shadow-soft" />
+        <h1 className="mt-8 text-[34px] font-semibold leading-tight text-ink" translate="no">{t('app.name')}</h1>
         <p className="mt-3 max-w-[20rem] text-[17px] leading-relaxed text-slate-600">{t('app.tagline')}</p>
         <ul className="mt-12 space-y-6">
           {FEATURES.map(({ icon: Icon, title, body }) => (
@@ -48,7 +48,7 @@ export function Landing() {
           </svg>
           {t('auth.google')}
         </Button>
-        <p className="text-center text-[13px] text-slate-500">Tracks who owes whom. Never moves money.</p>
+        <p className="text-center text-[13px] text-slate-500">Tracks who should give and get. Never moves money.</p>
       </div>
     </div>
   );

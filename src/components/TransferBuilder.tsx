@@ -11,10 +11,8 @@ import { errorMessage } from '@/lib/errors';
 import { formatTaka, isPartialTakaInput, parseTakaToPoisha, poishaToInput } from '@/lib/money';
 
 /**
- * Story C-01.  You are the intermediary: someone owes you, you owe someone
- * else, and you propose that you drop out of the middle.  The panel shows the
- * state before and after explicitly — users will not approve what they do not
- * understand, and comprehension is the product (§13.3).
+ * Story C-01.  You are the intermediary: someone should give you money, you
+ * need to give someone else, and you propose that you drop out of the middle.
  */
 export function TransferBuilder({ groupId, me, people, owes }: {
   groupId: string; me: string;
@@ -50,7 +48,7 @@ export function TransferBuilder({ groupId, me, people, owes }: {
   if (debtors.length === 0 || creditors.length === 0) {
     return (
       <EmptyState icon={ArrowLeftRight} title="No transfer possible right now"
-                  body="You need someone who owes you and someone you owe." />
+                  body="You need someone who should give you money, and someone you need to give to." />
     );
   }
 
@@ -74,7 +72,7 @@ export function TransferBuilder({ groupId, me, people, owes }: {
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <Section title="Who owes you?">
+      <Section title="Who should give you?">
         <div className="flex flex-wrap gap-2">
           {debtors.map((p) => (
             <Chip key={p.id} selected={debtor === p.id} onClick={() => setDebtor(p.id)}>
@@ -83,7 +81,7 @@ export function TransferBuilder({ groupId, me, people, owes }: {
           ))}
         </div>
       </Section>
-      <Section title="Who do you owe?">
+      <Section title="Who do you need to give to?">
         <div className="flex flex-wrap gap-2">
           {creditors.map((p) => (
             <Chip key={p.id} selected={creditor === p.id} disabled={p.id === debtor} onClick={() => setCreditor(p.id)}>

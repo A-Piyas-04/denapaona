@@ -30,7 +30,7 @@ export const TOUR_STEPS: TourStep[] = [
     place: 'groups',
     element: '[data-tour="group-row"]',
     title: 'Your groups',
-    body: 'Each group shows your balance at a glance. Green means you’re owed, red means you owe.',
+    body: 'Each group shows your balance at a glance. Green means you’re supposed to get, red means you need to give.',
     action: /^\/groups\/[0-9a-f-]{36}$/,
     hint: 'Tap the group to open it',
     fallback: 'Create a group with the + button, or join one with an invite link.',
@@ -39,10 +39,11 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'balance',
     place: 'group',
-    element: '[data-tour="balance-hero"]',
-    title: 'Where you stand',
-    body: 'Your total in this group. Tap “Why?” any time to see every step behind the number.',
+    element: '[data-tour="balance-list"]',
+    title: 'Who you give and get from',
+    body: 'Two simple lists: people you need to give to, and people you’re supposed to get from. Each row has History, Settle up, and Transfer.',
     side: 'bottom',
+    fallback: 'Open the Balances tab to see who you need to give to and who you’re supposed to get from.',
   },
   {
     id: 'add-expense',
@@ -61,14 +62,6 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Who paid, and how to split',
     body: 'It defaults to you paying, split equally. Tap here to change people or enter shares by hand.',
     side: 'top',
-  },
-  {
-    id: 'actions',
-    place: 'group',
-    element: '[data-tour="group-actions"]',
-    title: 'Settle and transfer',
-    body: 'Settle up shows the fewest payments to clear everyone. Transfer passes a debt along, if everyone agrees.',
-    side: 'bottom',
   },
   {
     id: 'inbox',

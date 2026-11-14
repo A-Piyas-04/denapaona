@@ -31,9 +31,9 @@ const MESSAGES: Record<string, string> = {
   PARTIES_MUST_BE_DISTINCT: 'Pick three different people.',
   PARTIES_MUST_DIFFER: 'Pick two different people.',
   ALL_PARTIES_MUST_BE_MEMBERS: 'Everyone involved must be in this group.',
-  DEBTOR_LEG_INSUFFICIENT: 'That’s more than they owe you.',
-  INTERMEDIARY_LEG_INSUFFICIENT: 'That’s more than you owe them.',
-  SETTLEMENT_EXCEEDS_BALANCE: 'That’s more than is owed.',
+  DEBTOR_LEG_INSUFFICIENT: 'That’s more than they’re supposed to give you.',
+  INTERMEDIARY_LEG_INSUFFICIENT: 'That’s more than you need to give them.',
+  SETTLEMENT_EXCEEDS_BALANCE: 'That’s more than the balance.',
   DECREASE_EXCEEDS_BALANCE: 'That reduction is more than the current balance.',
   INVALID_DIRECTION: 'Choose whether the balance goes up or down.',
   PROPOSAL_RATE_LIMIT: 'You’ve sent several proposals recently. Give it some time.',
@@ -69,12 +69,12 @@ export function toAppError(err: unknown): AppError {
 
   const { code, detail } = extractCode(raw);
   if (code === 'OUTSTANDING_BALANCE') {
-    // detail is the member's net: negative means they owe.
+    // detail is the member's net: negative means they still need to give.
     const net = Number(detail ?? 0);
     const msg =
       net < 0
-        ? `Settle up before leaving. You still owe ${formatTaka(-net)}.`
-        : `Settle up before leaving. You’re still owed ${formatTaka(net)}.`;
+        ? `Settle up before leaving. You still need to give ${formatTaka(-net)}.`
+        : `Settle up before leaving. You’re still supposed to get ${formatTaka(net)}.`;
     return new AppError(code, msg, detail);
   }
   return new AppError(code, MESSAGES[code] ?? 'Something went wrong. Please try again.', detail);

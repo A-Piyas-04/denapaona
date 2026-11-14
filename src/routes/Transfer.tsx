@@ -19,8 +19,8 @@ export function Transfer() {
   return (
     <AppShell title={t('action.transfer')} back={`/groups/${groupId}`} nav={false} action={
       <InfoSheet title="How a transfer works" label="How a transfer works">
-        <p>Someone owes you, and you owe someone else. Ask them to deal with each other directly, so one payment settles two debts.</p>
-        <p>Both of them must agree. A debt is a relationship, not just a number. If either says no, nothing changes.</p>
+        <p>Someone should give you money, and you need to give someone else. Ask them to deal with each other directly, so one payment settles two balances.</p>
+        <p>Both of them must agree. If either says no, nothing changes.</p>
       </InfoSheet>
     }>
       <p className="-mb-2 px-1 text-[15px] text-slate-600">One payment can clear two debts. Both people must agree.</p>

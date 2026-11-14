@@ -7,7 +7,7 @@ import { shortDate, cn } from '@/lib/format';
 import type { DerivationRow } from '@/lib/types';
 
 /**
- * Feature 4.5 — "Why do I owe this?"  Every contributing entry in order, with
+ * Feature 4.5 — pair history.  Every contributing entry in order, with
  * a plain-language cause and the running total after it, so the number can be
  * followed line by line (story E-01).  Rounding is stated explicitly (E-02).
  */
@@ -50,8 +50,8 @@ function Row({ row: r, groupId, otherName, last }: { row: DerivationRow; groupId
         <div className="mt-2 flex items-center justify-between gap-2 text-[13px]">
           <span className={cn('tnum', running > 0 ? 'text-owed' : running < 0 ? 'text-owe' : 'text-slate-500')}>
             {running === 0 ? 'Square after this' : running > 0
-              ? <>Then {otherName} owes you <Taka poisha={running} /></>
-              : <>Then you owe <Taka poisha={-running} /></>}
+              ? <>Then {otherName} should give you <Taka poisha={running} /></>
+              : <>Then you need to give <Taka poisha={-running} /></>}
           </span>
           {hasMore && (
             <button type="button" className="inline-flex items-center gap-0.5 font-semibold text-slate-500 hover:text-slate-800"

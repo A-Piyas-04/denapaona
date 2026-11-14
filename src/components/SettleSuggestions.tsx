@@ -61,7 +61,7 @@ export function SettleSuggestions({ groupId, me, nets, name }: {
                          <Avatar name={name(p.to)} seed={p.to} size={32} className="ring-2 ring-white" />
                        </span>
                      }
-                     title={`${who(p.from)} ${p.from === me ? 'pay' : 'pays'} ${who(p.to, false)}`}
+                     title={`${who(p.from)} ${p.from === me ? 'give' : 'gives'} ${who(p.to, false)}`}
                      subtitle={involved ? 'Tap to mark as paid' : undefined}
                      trailing={<Taka poisha={p.amountPoisha} className={cn('text-[16px] font-semibold', p.from === me ? 'text-owe' : p.to === me ? 'text-owed' : 'text-slate-700')} />}
                      chevron={involved} />
@@ -92,7 +92,7 @@ export function SettleSuggestions({ groupId, me, nets, name }: {
               <Avatar name={name(open.from)} seed={open.from} size={48} className="ring-4 ring-white" />
               <Avatar name={name(open.to)} seed={open.to} size={48} className="ring-4 ring-white" />
             </div>
-            <p className="text-[16px] text-slate-700">{who(open.from)} {open.from === me ? 'pay' : 'pays'} {who(open.to, false)}</p>
+            <p className="text-[16px] text-slate-700">{who(open.from)} {open.from === me ? 'give' : 'gives'} {who(open.to, false)}</p>
             <p className="font-display text-[32px] font-semibold text-slate-900 tnum">{formatTaka(open.amountPoisha)}</p>
             <p className="text-[14px] text-slate-500">
               {open.from === me ? `${name(open.to)} confirms before it counts. Paying in an app doesn’t record it here.`

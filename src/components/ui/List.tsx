@@ -11,7 +11,7 @@ export function Section({ title, action, children, className }: {
     <section className={className}>
       {(title || action) && (
         <div className="mb-2.5 flex min-h-[28px] items-center justify-between gap-3 px-1">
-          {title && <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>}
+          {title && <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">{title}</h2>}
           {action}
         </div>
       )}
@@ -23,7 +23,7 @@ export function Section({ title, action, children, className }: {
 /** One white card holding rows separated by hairlines. */
 export function ListGroup({ children, className, ...rest }: { children: ReactNode; className?: string } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('overflow-hidden rounded-2xl border border-slate-200/80 bg-white divide-y divide-slate-100', className)} {...rest}>
+    <div className={cn('overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-soft divide-y divide-slate-100/90', className)} {...rest}>
       {children}
     </div>
   );

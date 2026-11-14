@@ -14,8 +14,7 @@ import { errorMessage } from '@/lib/errors';
 import { formatTaka, isPartialTakaInput, parseTakaToPoisha } from '@/lib/money';
 
 /**
- * "Why do I owe this?" — stories E-01, E-02, plus the actions that follow
- * naturally from reading a balance: settle all (F-05) and propose a
+ * Pair history — stories E-01, E-02, plus settle all (F-05) and propose a
  * correction (C-07).
  */
 export function Explain() {
@@ -56,7 +55,7 @@ export function Explain() {
             </div>
           )}
           <StatHero
-            label={final === 0 ? 'Right now' : final > 0 ? `${other} owes you` : `You owe ${other}`}
+            label={final === 0 ? 'Right now' : final > 0 ? `${other} should give you` : `You need to give ${other}`}
             tone={final > 0 ? 'owed' : final < 0 ? 'owe' : 'neutral'}
             value={final === 0 ? <span className="text-slate-400">Square</span>
               : <span className={final > 0 ? 'text-owed' : 'text-owe'}>{formatTaka(Math.abs(final))}</span>}
@@ -64,7 +63,7 @@ export function Explain() {
               <div className="mt-1 flex flex-wrap gap-2">
                 {final !== 0 && (
                   <Button size="sm" busy={busy} onClick={settleAll}>
-                    {final < 0 ? `Settle ${formatTaka(-final)}` : `${other} paid me`}
+                    {final < 0 ? `Settle ${formatTaka(-final)}` : `${other} gave me`}
                   </Button>
                 )}
                 <Button size="sm" variant="secondary" onClick={() => setCorrecting(true)}>Propose a correction</Button>
@@ -128,11 +127,11 @@ function CorrectionSheet({ open, onClose, groupId, me, otherId, other, current }
            footer={<Button block size="lg" busy={busy} disabled={target === null || delta === 0 || !reason.trim()} onClick={send}>Send for approval</Button>}>
       <div className="space-y-5">
         <p className="text-[15px] text-slate-600">
-          Now: {current === 0 ? 'you’re square' : current > 0 ? `${other} owes you ${formatTaka(current)}` : `you owe ${other} ${formatTaka(-current)}`}.
+          Now: {current === 0 ? 'you’re square' : current > 0 ? `${other} should give you ${formatTaka(current)}` : `you need to give ${other} ${formatTaka(-current)}`}.
           {' '}{other} must agree first.
         </p>
         <Segmented label="Direction" value={dir} onChange={setDir}
-                   options={[{ value: 'they', label: `${other} owes me` }, { value: 'me', label: `I owe ${other}` }]} />
+                   options={[{ value: 'they', label: `${other} should give me` }, { value: 'me', label: `I need to give ${other}` }]} />
         <Field label="It should be (৳)" htmlFor="corr-amount">
           <Input id="corr-amount" inputMode="decimal" value={value} onChange={(e) => isPartialTakaInput(e.target.value) && setValue(e.target.value)} />
         </Field>

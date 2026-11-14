@@ -12,7 +12,7 @@ function EdgeRow({ e, name, avatarName, emphasis }: {
   const [from, to] = e.v >= 0 ? [e.a, e.b] : [e.b, e.a];
   const fromName = name(from);
   const toName = name(to);
-  const owes = fromName === 'You' ? 'owe' : 'owes';
+  const giveVerb = fromName === 'You' ? 'need to give' : 'needs to give';
   return (
     <li className="flex items-center gap-3 py-2">
       <span className="flex shrink-0 -space-x-2">
@@ -26,7 +26,7 @@ function EdgeRow({ e, name, avatarName, emphasis }: {
       ) : (
         <>
           <span className={cn('min-w-0 flex-1 text-[15px]', emphasis ? 'font-semibold text-slate-900' : 'text-slate-700')}>
-            {fromName} {owes} {toName === 'You' ? 'you' : toName}
+            {fromName} {giveVerb} {toName === 'You' ? 'you' : toName}
           </span>
           <span className={cn('shrink-0 text-[15px] tnum', emphasis ? 'font-semibold text-slate-900' : 'font-medium text-slate-700')}>
             {formatTaka(Math.abs(e.v))}

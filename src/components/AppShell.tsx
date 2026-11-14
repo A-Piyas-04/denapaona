@@ -25,25 +25,25 @@ export function AppShell({ title, back, action, children, nav = true, fab }: {
   const t = useT();
   const root = !back;
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-canvas sm:border-x sm:border-slate-200/70"
+    <div className="mx-auto flex min-h-[100dvh] max-w-app flex-col bg-transparent sm:border-x sm:border-slate-200/60 sm:bg-canvas/80"
          style={{ '--nav-h': nav ? '64px' : '0px' } as CSSProperties}>
       <a href="#main" className="sr-only z-50 rounded-xl bg-white px-4 py-2 font-semibold text-brand shadow-float focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
         Skip to content
       </a>
       {title !== undefined && (
-        <header className={cn('sticky top-0 z-30 flex items-center gap-1 border-b border-slate-200/70 bg-canvas/90 px-2 backdrop-blur-md',
+        <header className={cn('sticky top-0 z-30 flex items-center gap-1 border-b border-slate-200/50 bg-canvas/85 px-2 backdrop-blur-md',
                               root ? 'h-16 pl-5' : 'h-14')}>
           {back && (
             <button
               type="button"
               onClick={() => (back === true ? navigate(-1) : navigate(back))}
-              className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-800 hover:bg-slate-200/70"
+              className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/70"
               aria-label="Back"
             >
               <ChevronLeft size={24} aria-hidden />
             </button>
           )}
-          <h1 className={cn('min-w-0 flex-1 truncate font-semibold text-slate-900', root ? 'text-[24px]' : 'text-[17px]')}>{title}</h1>
+          <h1 className={cn('min-w-0 flex-1 truncate font-semibold text-ink', root ? 'text-[24px]' : 'text-[17px]')}>{title}</h1>
           {action && <div className="flex shrink-0 items-center gap-1">{action}</div>}
         </header>
       )}

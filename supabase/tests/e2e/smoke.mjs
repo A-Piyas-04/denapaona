@@ -71,7 +71,7 @@ try {
   await arif.getByLabel('What was it?').fill('Dinner at Star');
   await shot(arif, '04-add-expense');
   await arif.getByRole('button', { name: /Save ৳1,200.00/ }).click();
-  await expectText(arif, "You're owed");
+  await expectText(arif, "You're supposed to get");
   await expectText(arif, '৳800.00');
   await shot(arif, '05-dashboard-owed');
   step('dinner recorded; Arif is owed ৳800.00');
@@ -115,12 +115,12 @@ try {
 
   // Balances after: Sami square with Arif, Arif owes Rafi ৳200
   await arif.goto(groupUrl);
-  await expectText(arif, 'You owe');
+  await expectText(arif, 'You need to give');
   await expectText(arif, '৳200.00');
   step('Arif now owes ৳200.00');
 
   // E-01 + I6: derivation with Rafi
-  await arif.getByRole('link', { name: 'Why?' }).first().click();
+  await arif.getByRole('link', { name: 'History' }).first().click();
   await expectText(arif, 'Every step that produced this figure');
   await expectText(arif, 'Transfer approved by');
   if (await arif.getByText('Something’s wrong').count()) throw new Error('I6 self-check failed in the UI');

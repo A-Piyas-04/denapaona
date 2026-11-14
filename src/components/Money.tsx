@@ -2,8 +2,8 @@ import { formatTaka } from '@/lib/money';
 import { cn } from '@/lib/format';
 
 /**
- * A signed balance from MY point of view: positive = I'm owed (green),
- * negative = I owe (red), zero = grey.  Colour-coded per story A-04.
+ * A signed balance from MY point of view: positive = I'm supposed to get
+ * (green), negative = I need to give (red), zero = grey.
  */
 export function Balance({ poisha, className, settledText = 'All settled' }: {
   poisha: number; className?: string; settledText?: string;

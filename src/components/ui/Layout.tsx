@@ -9,9 +9,9 @@ export function StatHero({ label, value, sub, action, tone = 'neutral', classNam
   tone?: 'neutral' | 'owe' | 'owed'; className?: string; 'data-tour'?: string;
 }) {
   return (
-    <div className={cn('rounded-3xl border border-slate-200/80 bg-white px-5 py-5', className)} {...rest}>
+    <div className={cn('rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft', className)} {...rest}>
       <p className={cn('text-[15px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-slate-500')}>{label}</p>
-      <div className="mt-1 font-display text-[36px] font-semibold leading-tight tracking-tight text-slate-900 tnum">{value}</div>
+      <div className="mt-1 font-display text-[36px] font-semibold leading-tight tracking-tight text-ink tnum">{value}</div>
       {(sub || action) && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           {sub && <div className="text-[14px] text-slate-500">{sub}</div>}

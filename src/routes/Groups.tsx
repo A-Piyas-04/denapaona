@@ -38,7 +38,7 @@ export function Groups() {
                   <ListRow key={g.id} to={`/groups/${g.id}`} data-tour={i === 0 ? 'group-row' : undefined}
                            leading={<Avatar name={g.name} seed={g.id} size={40} square />}
                            title={g.name}
-                           subtitle={g.netPoisha > 0 ? "You're owed" : g.netPoisha < 0 ? 'You owe' : 'No balance'}
+                           subtitle={g.netPoisha > 0 ? t('groups.subtitle.get') : g.netPoisha < 0 ? t('groups.subtitle.give') : t('groups.subtitle.none')}
                            trailing={<Balance poisha={g.netPoisha} settledText={t('balance.allSettled')} className="text-[15px]" />} />
                 ))}
               </ListGroup>
@@ -59,13 +59,13 @@ function Summary({ list }: { list: MyGroup[] }) {
   const owed = list.reduce((s, g) => s + Math.max(0, g.netPoisha), 0);
   const owe = list.reduce((s, g) => s + Math.max(0, -g.netPoisha), 0);
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/80 bg-white">
+    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-soft">
       <div className="px-5 py-4">
-        <p className="text-[14px] font-medium text-slate-500">{t('balance.youreOwed')}</p>
+        <p className="text-[14px] font-medium text-slate-500">{t('balance.youAreSupposedToGet')}</p>
         <Taka poisha={owed} className={cn('mt-1 block font-display text-[24px] font-semibold', owed ? 'text-owed' : 'text-slate-400')} />
       </div>
       <div className="border-l border-slate-100 px-5 py-4">
-        <p className="text-[14px] font-medium text-slate-500">{t('balance.youOwe')}</p>
+        <p className="text-[14px] font-medium text-slate-500">{t('balance.youNeedToGive')}</p>
         <Taka poisha={owe} className={cn('mt-1 block font-display text-[24px] font-semibold', owe ? 'text-owe' : 'text-slate-400')} />
       </div>
     </div>
