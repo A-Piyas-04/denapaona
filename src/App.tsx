@@ -13,11 +13,6 @@ import { Transfer } from './routes/Transfer';
 import { History } from './routes/History';
 import { ExpenseDetail } from './routes/ExpenseDetail';
 import { GroupSettings } from './routes/GroupSettings';
-import { Trips } from './routes/Trips';
-import { TripDashboard } from './routes/TripDashboard';
-import { TripAdd } from './routes/TripAdd';
-import { TripClose } from './routes/TripClose';
-import { TripLeaders } from './routes/TripLeaders';
 import { Explain } from './routes/Explain';
 import { Inbox } from './routes/Inbox';
 import { ProposalDetail } from './routes/ProposalDetail';
@@ -40,13 +35,8 @@ export function App() {
       <Route path="/groups/:id/settle" element={<Authed><Settle /></Authed>} />
       <Route path="/groups/:id/transfer" element={<Authed><Transfer /></Authed>} />
       <Route path="/groups/:id/history" element={<Authed><History /></Authed>} />
-      <Route path="/groups/:id/trips" element={<Authed><Trips /></Authed>} />
       <Route path="/groups/:id/settings" element={<Authed><GroupSettings /></Authed>} />
       <Route path="/groups/:id/expenses/:expenseId" element={<Authed><ExpenseDetail /></Authed>} />
-      <Route path="/trips/:id" element={<Authed><TripDashboard /></Authed>} />
-      <Route path="/trips/:id/add" element={<Authed><TripAdd /></Authed>} />
-      <Route path="/trips/:id/close" element={<Authed><TripClose /></Authed>} />
-      <Route path="/trips/:id/leaders" element={<Authed><TripLeaders /></Authed>} />
       <Route path="/explain/:groupId/:otherId" element={<Authed><Explain /></Authed>} />
       <Route path="/proposals" element={<Authed><Inbox /></Authed>} />
       <Route path="/proposals/:id" element={<Authed><ProposalDetail /></Authed>} />

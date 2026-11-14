@@ -27,63 +27,15 @@ export interface GroupMember {
   joined_at: string;
 }
 
-export type TripStatus = 'active' | 'closed';
-export type EntryMode = 'leaders_only' | 'open';
-
-export interface Trip {
-  id: UUID;
-  group_id: UUID;
-  name: string;
-  started_on: string;
-  ended_on: string | null;
-  status: TripStatus;
-  entry_mode: EntryMode;
-  created_by: UUID;
-  created_at: string;
-}
-
-export interface TripLeader {
-  trip_id: UUID;
-  user_id: UUID;
-  appointed_by: UUID;
-  appointed_at: string;
-}
-
-export interface TripLeaderLog {
-  id: UUID;
-  trip_id: UUID;
-  user_id: UUID;
-  action: 'appointed' | 'removed' | 'trip_closed' | 'trip_reopened';
-  actor_id: UUID;
-  created_at: string;
-}
-
-export interface TripPreset {
-  id: UUID;
-  trip_id: UUID;
-  label: string;
-  user_ids: UUID[];
-}
-
 export interface ExpenseShare {
   expense_id: UUID;
   user_id: UUID;
   share_poisha: number;
 }
 
-export interface EntryDispute {
-  id: UUID;
-  expense_id: UUID;
-  raised_by: UUID;
-  reason: string;
-  status: 'open' | 'resolved' | 'withdrawn';
-  created_at: string;
-}
-
 export interface Expense {
   id: UUID;
   group_id: UUID;
-  trip_id: UUID | null;
   payer_id: UUID;
   total_poisha: number;
   description: string;
@@ -93,13 +45,11 @@ export interface Expense {
   voided_by: UUID | null;
   void_reason: string | null;
   expense_shares?: ExpenseShare[];
-  entry_disputes?: EntryDispute[];
 }
 
 export interface LedgerEntry {
   id: UUID;
   group_id: UUID;
-  trip_id: UUID | null;
   from_user: UUID;
   to_user: UUID;
   amount_poisha: number;
