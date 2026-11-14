@@ -6,11 +6,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-fg shadow-sm hover:bg-brand-hover disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none',
-  secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 disabled:text-slate-400',
-  outline: 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 disabled:text-slate-400',
-  ghost: 'text-slate-700 hover:bg-slate-100 disabled:text-slate-400',
-  danger: 'bg-owe text-white hover:bg-red-800 disabled:bg-slate-200 disabled:text-slate-500',
+  primary: 'bg-brand text-brand-fg shadow-gold hover:bg-brand-hover disabled:bg-night-elev disabled:text-cream/35 disabled:shadow-none',
+  secondary: 'bg-night-elev text-cream hover:bg-night-line disabled:text-cream/35',
+  outline: 'border border-night-line bg-transparent text-paper hover:bg-night-elev disabled:text-cream/35',
+  ghost: 'text-cream/80 hover:bg-night-elev disabled:text-cream/35',
+  danger: 'bg-owe text-white hover:bg-red-700 disabled:bg-night-elev disabled:text-cream/35',
 };
 const SIZES: Record<Size, string> = {
   sm: 'h-9 min-h-[36px] px-3.5 text-sm',
@@ -36,7 +36,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       type={type}
-      // Disabled while busy: the double-tap guard from stories A-02#4 / B-01#8.
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={buttonClass(variant, size, block, className)}
@@ -49,7 +48,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-/** A link styled as a button — for navigation, so it stays a real link. */
 export function ButtonLink({ to, variant, size, block, className, children, ...rest }: {
   to: string; variant?: Variant; size?: Size; block?: boolean; className?: string; children: ReactNode;
 } & Record<`data-${string}`, string>) {
@@ -65,7 +63,9 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
       title={label}
       className={cn(
         'pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
-        tone === 'brand' ? 'bg-brand text-white shadow-sm hover:bg-brand-hover' : 'text-slate-700 hover:bg-white/80',
+        tone === 'brand'
+          ? 'bg-brand text-brand-fg shadow-gold hover:bg-brand-hover'
+          : 'text-cream/80 hover:bg-night-elev hover:text-paper',
         className,
       )}
       {...rest}

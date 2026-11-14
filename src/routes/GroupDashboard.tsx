@@ -103,15 +103,15 @@ export function GroupDashboard() {
 
       {pairs && pairs.length > 0 && (
         <div
-          className="rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft"
+          className="rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft"
           data-tour="balance-summary"
         >
-          <p className="text-[13px] font-medium text-slate-500">
+          <p className="text-[13px] font-medium text-ink-soft">
             {net > 0 ? t('balance.youAreSupposedToGet') : net < 0 ? t('balance.youNeedToGive') : t('balance.allSettled')}
           </p>
           <p className={cn(
             'mt-1 font-display text-[34px] font-semibold leading-none tracking-tight tnum',
-            net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-slate-400',
+            net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-ink-soft/40',
           )}>
             {net === 0 ? '—' : <Taka poisha={Math.abs(net)} />}
           </p>

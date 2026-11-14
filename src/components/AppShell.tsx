@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CircleUserRound, Inbox as InboxIcon, Users, WifiOff } from 'lucide-react';
-import { LogoMark } from '@/components/Brand';
+import { BrandLockup } from '@/components/Brand';
 import { PageEnter } from '@/components/motion';
 import { useInbox } from '@/hooks/useProposals';
 import { useOnline } from '@/hooks/useBrowser';
@@ -9,9 +9,8 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/format';
 
 /**
- * Mobile-first frame (§6 design target: 390px; desktop is a centered column).
- * Conventions match consumer finance apps: sticky header, bottom tabs,
- * primary actions in the thumb zone, logo on root tabs.
+ * Mobile-first frame (390px target). Dark chrome + paper content.
+ * Root headers carry the দেনা পাওনা lockup; nested screens use back + title.
  */
 export function AppShell({
   title,
@@ -25,7 +24,6 @@ export function AppShell({
   back?: string | true;
   action?: ReactNode;
   children: ReactNode;
-  /** Hide the bottom nav on focused tasks (forms), so the primary action owns the bottom. */
   nav?: boolean;
   fab?: ReactNode;
 }) {
@@ -35,49 +33,42 @@ export function AppShell({
   const root = !back;
 
   return (
-    <div
-      className="app-frame"
-      style={{ '--nav-h': nav ? '64px' : '0px' } as CSSProperties}
-    >
+    <div className="app-frame" style={{ '--nav-h': nav ? '68px' : '0px' } as CSSProperties}>
       <a
         href="#main"
-        className="sr-only z-50 rounded-xl bg-white px-4 py-2 font-semibold text-brand shadow-float focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        className="sr-only z-50 rounded-xl bg-brand px-4 py-2 font-semibold text-brand-fg shadow-gold focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
       >
         Skip to content
       </a>
 
       {title !== undefined && (
-        <header className="sticky top-0 z-30 border-b border-slate-200/60 bg-canvas/90 shadow-header backdrop-blur-xl safe-top">
-          <div className={cn('flex items-center gap-1 px-2', root ? 'h-16 pl-4 pr-3' : 'h-14')}>
-            {back && (
+        <header className="sticky top-0 z-30 border-b border-night-line/80 bg-night/95 shadow-header backdrop-blur-xl safe-top">
+          {root ? (
+            <div className="flex h-[4.25rem] items-center gap-2 px-3 pl-4">
+              <div className="min-w-0 flex-1">
+                <BrandLockup size="sm" />
+                {title != null && title !== '' && title !== t('app.name') && (
+                  <p className="mt-0.5 truncate pl-[44px] text-[12px] font-medium text-cream/50">{title}</p>
+                )}
+              </div>
+              {action && <div className="flex shrink-0 items-center gap-0.5">{action}</div>}
+            </div>
+          ) : (
+            <div className="flex h-14 items-center gap-0.5 px-2">
               <button
                 type="button"
                 onClick={() => (back === true ? navigate(-1) : navigate(back))}
-                className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-white/80"
+                className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-paper hover:bg-night-elev"
                 aria-label="Back"
               >
                 <ChevronLeft size={24} aria-hidden />
               </button>
-            )}
-
-            <h1
-              className={cn(
-                'min-w-0 flex-1 truncate font-semibold text-ink',
-                root ? 'text-[22px]' : 'text-[17px]',
-              )}
-            >
-              {root ? (
-                <span className="inline-flex max-w-full items-center gap-2.5">
-                  <LogoMark size={30} className="shadow-soft" />
-                  <span className="truncate">{title}</span>
-                </span>
-              ) : (
-                title
-              )}
-            </h1>
-
-            {action && <div className="flex shrink-0 items-center gap-0.5">{action}</div>}
-          </div>
+              <h1 className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold text-paper">
+                {title}
+              </h1>
+              {action && <div className="flex shrink-0 items-center gap-0.5 text-cream">{action}</div>}
+            </div>
+          )}
         </header>
       )}
 
@@ -98,7 +89,7 @@ export function AppShell({
           nav ? (fab ? 'pb-44' : 'pb-28') : 'pb-[max(1.5rem,env(safe-area-inset-bottom))]',
         )}
       >
-        <PageEnter className="flex flex-1 flex-col gap-6 px-4 pt-5">
+        <PageEnter className="flex flex-1 flex-col gap-5 px-4 pt-4">
           {children}
         </PageEnter>
       </main>
@@ -143,9 +134,9 @@ function BottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-app border-t border-slate-200/80 bg-white/95 shadow-nav backdrop-blur-xl safe-bottom"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-app border-t border-night-line/90 bg-night/97 shadow-nav backdrop-blur-xl safe-bottom"
     >
-      <div className="flex h-16">
+      <div className="flex h-[4.25rem]">
         {items.map(({ to, label, icon: Icon, tour, badge, match }) => {
           const active = match(location.pathname);
           return (
@@ -155,20 +146,20 @@ function BottomNav() {
               data-tour={tour}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'pressable relative flex h-16 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold tracking-wide',
-                active ? 'text-brand' : 'text-slate-500',
+                'pressable relative flex h-[4.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold',
+                active ? 'text-brand' : 'text-cream/45',
               )}
             >
               <span
                 className={cn(
-                  'relative flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200',
-                  active && 'bg-brand-soft',
+                  'relative flex h-9 w-14 items-center justify-center rounded-2xl transition-colors duration-200',
+                  active && 'bg-brand-muted',
                 )}
               >
-                <Icon size={22} strokeWidth={active ? 2.25 : 1.75} aria-hidden />
+                <Icon size={22} strokeWidth={active ? 2.3 : 1.7} aria-hidden />
                 {!!badge && (
                   <span
-                    className="absolute right-1.5 top-0 min-w-[18px] rounded-full bg-owe px-1 text-center text-[11px] font-bold leading-[18px] text-white ring-2 ring-white"
+                    className="absolute right-1 top-0 min-w-[18px] rounded-full bg-owe px-1 text-center text-[11px] font-bold leading-[18px] text-white ring-2 ring-night"
                     aria-label={`${badge} waiting for you`}
                   >
                     {badge > 9 ? '9+' : badge}
@@ -177,7 +168,7 @@ function BottomNav() {
               </span>
               {label}
               {active && (
-                <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-brand" aria-hidden />
+                <span className="absolute inset-x-7 top-0 h-0.5 rounded-full bg-brand" aria-hidden />
               )}
             </NavLink>
           );

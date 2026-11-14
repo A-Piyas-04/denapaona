@@ -108,7 +108,7 @@ export function BalanceBreakdown({ groupId, me, pairs, people, owes, loading }: 
 function RowAction({ label, icon: Icon, to, onClick }: {
   label: string; icon: typeof HistoryIcon; to?: string; onClick?: () => void;
 }) {
-  const cls = 'pressable inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-2 text-[13px] font-semibold text-slate-700 hover:bg-brand-soft hover:text-brand-ink';
+  const cls = 'pressable inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-paper-muted px-2 text-[13px] font-semibold text-ink hover:bg-brand-soft hover:text-brand-ink';
   if (to) {
     return (
       <Link to={to} className={cls} onClick={(e) => e.stopPropagation()}>

@@ -4,7 +4,7 @@ import { cn } from '@/lib/format';
 
 export function Card({ className, children, ...rest }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft', className)} {...rest}>
+    <div className={cn('rounded-2xl border border-paper-muted/50 bg-paper p-4 text-ink shadow-soft', className)} {...rest}>
       {children}
     </div>
   );
@@ -14,7 +14,7 @@ export type Tone = 'slate' | 'brand' | 'owe' | 'owed' | 'amber';
 
 export function Badge({ tone = 'slate', children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
   const tones = {
-    slate: 'bg-slate-100 text-slate-700',
+    slate: 'bg-paper-muted text-ink-soft',
     brand: 'bg-brand-soft text-brand-ink',
     owe: 'bg-owe-soft text-owe',
     owed: 'bg-owed-soft text-owed',
@@ -27,12 +27,11 @@ export function Badge({ tone = 'slate', children, className }: { tone?: Tone; ch
   );
 }
 
-/** A loading placeholder.  Money screens show these, never a transient 0 (A-04#3). */
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'rounded-lg bg-gradient-to-r from-slate-200/90 via-slate-100 to-slate-200/90 bg-[length:200%_100%] animate-shimmer',
+        'rounded-lg bg-gradient-to-r from-night-elev via-night-line/60 to-night-elev bg-[length:200%_100%] animate-shimmer',
         className,
       )}
       aria-hidden
@@ -51,7 +50,9 @@ export function Chip({ selected, onClick, children, className, disabled }: {
       aria-pressed={selected}
       className={cn(
         'pressable inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-[15px] font-medium',
-        selected ? 'border-brand bg-brand-soft text-brand-ink' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+        selected
+          ? 'border-brand bg-brand-soft text-brand-ink'
+          : 'border-night-line bg-night-elev text-cream hover:border-cream/30',
         disabled && 'opacity-40',
         className,
       )}
@@ -66,7 +67,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col rounded-xl bg-slate-200/70 p-1">
+    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col rounded-xl bg-night-elev p-1">
       {options.map((o) => (
         <button
           key={o.value}
@@ -76,7 +77,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           onClick={() => onChange(o.value)}
           className={cn(
             'pressable h-10 rounded-lg text-[15px] font-medium transition-colors',
-            value === o.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
+            value === o.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-cream/55 hover:text-cream',
           )}
         >
           {o.label}
@@ -87,9 +88,9 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
 }
 
 const AVATAR_TONES = [
-  'bg-[#DCEFEA] text-[#0B5049]', 'bg-[#E3E8F8] text-[#2D3E8C]', 'bg-[#F6E6DA] text-[#8A3F12]',
-  'bg-[#EDE3F4] text-[#5E2F82]', 'bg-[#E2F0DC] text-[#2F6420]', 'bg-[#F7E2E6] text-[#8C2440]',
-  'bg-[#E0EEF6] text-[#1D5677]', 'bg-[#F3EDD5] text-[#6E5710]',
+  'bg-[#3A3018] text-[#F0B429]', 'bg-[#2A3348] text-[#A8B8E0]', 'bg-[#3A2818] text-[#E8A070]',
+  'bg-[#2E2440] text-[#C4A8E8]', 'bg-[#1F3528] text-[#7BC49A]', 'bg-[#3A2028] text-[#E890A8]',
+  'bg-[#1E3040] text-[#7EB8D8]', 'bg-[#353018] text-[#D4C070]',
 ];
 
 function hash(s: string) {
@@ -98,10 +99,8 @@ function hash(s: string) {
   return Math.abs(h);
 }
 
-/** Initials on a colour derived from a stable seed, so people stay recognisable. */
 export function Avatar({ name, url, size = 36, seed, className, square }: {
   name: string; url?: string | null; size?: number; seed?: string; className?: string;
-  /** Rounded square — used for groups, so they don't read as people. */
   square?: boolean;
 }) {
   const initials = name.split(/\s+/).filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
@@ -119,11 +118,13 @@ export function Avatar({ name, url, size = 36, seed, className, square }: {
   );
 }
 
-/** A rounded tile holding an icon — the leading element for non-person rows. */
 export function IconTile({ children, tone = 'slate', className }: { children: ReactNode; tone?: Tone; className?: string }) {
   const tones = {
-    slate: 'bg-slate-100 text-slate-600', brand: 'bg-brand-soft text-brand', owe: 'bg-owe-soft text-owe',
-    owed: 'bg-owed-soft text-owed', amber: 'bg-pending-soft text-pending',
+    slate: 'bg-paper-muted text-ink-soft',
+    brand: 'bg-brand-soft text-brand-ink',
+    owe: 'bg-owe-soft text-owe',
+    owed: 'bg-owed-soft text-owed',
+    amber: 'bg-pending-soft text-pending',
   } as const;
   return <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', tones[tone], className)} aria-hidden>{children}</span>;
 }

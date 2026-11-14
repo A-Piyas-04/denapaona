@@ -15,10 +15,10 @@ export const PROPOSAL_TYPE: Record<Proposal['type'], { label: string; icon: Luci
 /** Approval progress as dots: filled for each person who agreed. */
 export function ApprovalDots({ agreed, total }: { agreed: number; total: number }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
       <span className="flex gap-1" aria-hidden>
         {Array.from({ length: total }, (_, i) => (
-          <span key={i} className={cn('h-2 w-2 rounded-full', i < agreed ? 'bg-owed' : 'bg-slate-200')} />
+          <span key={i} className={cn('h-2 w-2 rounded-full', i < agreed ? 'bg-owed' : 'bg-paper-muted')} />
         ))}
       </span>
       {agreed} of {total} agreed
@@ -37,25 +37,25 @@ export function ProposalCard({ proposal: p, groupName, name, me, ...rest }: {
   const Icon = type.icon;
   return (
     <Link to={`/proposals/${p.id}`} {...rest}
-          className="pressable block rounded-2xl border border-slate-200/60 bg-white p-4 shadow-soft transition-colors hover:border-slate-300 active:bg-slate-50">
+          className="pressable block rounded-2xl border border-paper-muted/40 bg-paper p-4 text-ink shadow-soft transition-colors hover:border-brand/30 active:bg-paper-muted/50">
       <div className="flex items-start gap-3">
         <IconTile tone="brand"><Icon size={20} /></IconTile>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[13px] font-semibold text-brand">{type.label}</p>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-slate-500">
+            <p className="text-[13px] font-semibold text-brand-ink">{type.label}</p>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-ink-soft">
               <Clock size={13} aria-hidden /> {timeLeft(p.expires_at)}
             </span>
           </div>
-          <p className="mt-0.5 text-[15px] leading-snug text-slate-900">{describeProposal(p, name)}</p>
+          <p className="mt-0.5 text-[15px] leading-snug text-ink">{describeProposal(p, name)}</p>
           <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-            <span className="truncate text-[13px] text-slate-500">
+            <span className="truncate text-[13px] text-ink-soft">
               {groupName ? `${groupName}, from ${name(p.proposer_id)}` : `From ${name(p.proposer_id)}`}
             </span>
             <ApprovalDots agreed={agreed} total={parts.length} />
           </div>
           {waiting.length > 0 && (
-            <p className="mt-1 truncate text-[12px] text-slate-400">Waiting on {waiting.map((w) => name(w.user_id)).join(', ')}</p>
+            <p className="mt-1 truncate text-[12px] text-ink-soft/70">Waiting on {waiting.map((w) => name(w.user_id)).join(', ')}</p>
           )}
         </div>
       </div>

@@ -22,7 +22,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
     place: 'groups',
-    title: 'Welcome to HishebNama',
+    title: 'Welcome to দেনা পাওনা',
     body: 'A quick tour of the main features. It takes about two minutes, and you can skip it at any time.',
   },
   {

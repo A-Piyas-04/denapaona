@@ -5,25 +5,37 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Soft mint paper — calm ledger feel; teal reads as trust without default bank-blue.
-        canvas: '#F3F7F6',
-        ink: '#0F1F1C',
-        brand: { DEFAULT: '#0A6B61', hover: '#08554D', fg: '#ffffff', soft: '#D8EDE9', ink: '#043F39' },
-        // You need to give (warm coral-red) / you're supposed to get (deep leaf green)
-        owe: { DEFAULT: '#C2412D', soft: '#FCEEEA' },
-        owed: { DEFAULT: '#0F7A4A', soft: '#E3F5EC' },
-        pending: { DEFAULT: '#9A5B12', soft: '#FBF0E0' },
+        // Warm night ledger + mustard gold (দেনা পাওনা)
+        canvas: '#12100E',
+        night: { DEFAULT: '#1C1814', elev: '#26211C', line: '#3A342C' },
+        paper: { DEFAULT: '#FFF8EE', muted: '#F3EBD9' },
+        ink: { DEFAULT: '#1A1510', soft: '#5C5348' },
+        cream: '#F3E6C8',
+        brand: {
+          DEFAULT: '#F0B429',
+          hover: '#DFA010',
+          fg: '#1A1510',
+          soft: '#F8E9C0',
+          ink: '#8A6410',
+          muted: '#3A3018',
+        },
+        // Give / get — readable on paper cards
+        owe: { DEFAULT: '#D94B32', soft: '#FCE8E2' },
+        owed: { DEFAULT: '#2F8F5B', soft: '#E2F4EA' },
+        pending: { DEFAULT: '#C4891A', soft: '#F8ECD0' },
       },
       fontFamily: {
-        sans: ['"Source Sans 3"', '"Hind Siliguri"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['Lexend', '"Hind Siliguri"', 'system-ui', 'sans-serif'],
+        sans: ['Figtree', '"Hind Siliguri"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['"Hind Siliguri"', 'Figtree', 'system-ui', 'sans-serif'],
+        latin: ['Figtree', 'system-ui', 'sans-serif'],
       },
       maxWidth: { app: '28rem' },
       boxShadow: {
-        float: '0 12px 32px -14px rgba(4, 63, 57, 0.22), 0 2px 8px -2px rgba(4, 63, 57, 0.08)',
-        nav: '0 -1px 0 rgba(15, 31, 28, 0.06), 0 -10px 28px -18px rgba(4, 63, 57, 0.2)',
-        soft: '0 1px 2px rgba(15, 31, 28, 0.04), 0 4px 16px -6px rgba(4, 63, 57, 0.1)',
-        header: '0 1px 0 rgba(15, 31, 28, 0.05)',
+        float: '0 14px 36px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(240, 180, 41, 0.12)',
+        nav: '0 -1px 0 rgba(255, 248, 238, 0.06), 0 -12px 32px -16px rgba(0, 0, 0, 0.55)',
+        soft: '0 1px 2px rgba(26, 21, 16, 0.06), 0 8px 24px -10px rgba(26, 21, 16, 0.14)',
+        header: '0 1px 0 rgba(255, 248, 238, 0.06)',
+        gold: '0 8px 24px -8px rgba(240, 180, 41, 0.45)',
       },
       transitionTimingFunction: {
         out: 'cubic-bezier(0.23, 1, 0.32, 1)',
@@ -34,20 +46,16 @@ export default {
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'toast-in': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'page-enter': {
-          from: { opacity: '0', transform: 'translateY(6px)' },
+          from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
-        'indeterminate': {
+        indeterminate: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(250%)' },
-        },
-        'pulse-soft': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.55' },
         },
       },
       animation: {
@@ -57,7 +65,6 @@ export default {
         'page-enter': 'page-enter 280ms cubic-bezier(0.23, 1, 0.32, 1)',
         shimmer: 'shimmer 1.4s ease-in-out infinite',
         indeterminate: 'indeterminate 1.1s cubic-bezier(0.45, 0, 0.2, 1) infinite',
-        'pulse-soft': 'pulse-soft 1.6s ease-in-out infinite',
       },
     },
   },

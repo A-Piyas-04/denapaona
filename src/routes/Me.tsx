@@ -32,17 +32,20 @@ export function Me() {
   return (
     <AppShell title={t('nav.me')}>
       {profile.data ? (
-        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft">
+        <div className="flex items-center gap-4 rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft">
           <Avatar name={profile.data.display_name} url={profile.data.avatar_url} seed={me} size={60} />
           <div className="min-w-0">
-            <p className="truncate font-display text-[20px] font-semibold text-slate-900">{profile.data.display_name}</p>
-            <p className="mt-0.5 truncate text-[14px] text-slate-500">{profile.data.email}</p>
+            <p className="truncate font-display text-[20px] font-semibold text-ink">{profile.data.display_name}</p>
+            <p className="mt-0.5 truncate text-[14px] text-ink-soft">{profile.data.email}</p>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft" aria-busy>
-          <Skeleton className="h-[60px] w-[60px] rounded-full" />
-          <div className="flex-1 space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div>
+        <div className="flex items-center gap-4 rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 shadow-soft" aria-busy>
+          <Skeleton className="h-[60px] w-[60px] rounded-full !from-paper-muted !via-paper !to-paper-muted" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-32 !from-paper-muted !via-paper !to-paper-muted" />
+            <Skeleton className="h-4 w-44 !from-paper-muted !via-paper !to-paper-muted" />
+          </div>
         </div>
       )}
 

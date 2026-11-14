@@ -68,13 +68,13 @@ function NotConfigured() {
   return (
     <div className="app-frame safe-top px-6 pb-10 pt-14">
       <BrandLockup size="md" />
-      <h1 className="mt-8 text-[22px] font-semibold text-ink">HishebNama isn’t configured</h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
-        Copy <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">.env.example</code> to{' '}
-        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">.env.local</code> and set{' '}
-        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_SUPABASE_URL</code> and{' '}
-        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_SUPABASE_ANON_KEY</code>. Never put the
-        service role key in any <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_</code> variable.
+      <h1 className="mt-8 text-[22px] font-semibold text-paper">দেনা পাওনা isn’t configured</h1>
+      <p className="mt-3 text-[15px] leading-relaxed text-cream/65">
+        Copy <code className="rounded-md bg-night-elev px-1.5 py-0.5 text-[13px] text-brand">.env.example</code> to{' '}
+        <code className="rounded-md bg-night-elev px-1.5 py-0.5 text-[13px] text-brand">.env.local</code> and set{' '}
+        <code className="rounded-md bg-night-elev px-1.5 py-0.5 text-[13px] text-brand">VITE_SUPABASE_URL</code> and{' '}
+        <code className="rounded-md bg-night-elev px-1.5 py-0.5 text-[13px] text-brand">VITE_SUPABASE_ANON_KEY</code>. Never put the
+        service role key in any <code className="rounded-md bg-night-elev px-1.5 py-0.5 text-[13px] text-brand">VITE_</code> variable.
       </p>
     </div>
   );

@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#0C5E56"/><path d="M156 176h200M156 256h200M156 336h112" stroke="#fff" stroke-width="36" stroke-linecap="round"/><circle cx="352" cy="336" r="30" fill="#7FD1B9"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dena Paona">
+  <defs>
+    <linearGradient id="night" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#241E18"/>
+      <stop offset="100%" stop-color="#12100E"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7D060"/>
+      <stop offset="100%" stop-color="#E5A616"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#night)"/>
+  <!-- দেনা: descending stroke (give) -->
+  <path d="M148 150c0 0 8 118 8 168 0 42-18 74-52 86" fill="none" stroke="#F3E6C8" stroke-width="36" stroke-linecap="round"/>
+  <!-- পাওনা: ascending stroke (get) -->
+  <path d="M364 150c0 0-8 118-8 168 0 42 18 74 52 86" fill="none" stroke="url(#gold)" stroke-width="36" stroke-linecap="round"/>
+  <!-- Settlement node -->
+  <circle cx="256" cy="292" r="38" fill="url(#gold)"/>
+  <circle cx="256" cy="292" r="16" fill="#1A1510"/>
+</svg>

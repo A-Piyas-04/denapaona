@@ -43,7 +43,7 @@ export function Groups() {
                 ))}
               </ListGroup>
             </Section>
-            <Link to="/join" className="pressable inline-flex items-center justify-center gap-2 self-center rounded-xl px-3 py-2.5 text-[15px] font-semibold text-brand hover:bg-brand-soft/60">
+            <Link to="/join" className="pressable inline-flex items-center justify-center gap-2 self-center rounded-xl px-3 py-2.5 text-[15px] font-semibold text-brand hover:bg-brand-muted">
               <Link2 size={18} aria-hidden /> {t('groups.haveInvite')}
             </Link>
           </>
@@ -59,14 +59,14 @@ function Summary({ list }: { list: MyGroup[] }) {
   const owed = list.reduce((s, g) => s + Math.max(0, g.netPoisha), 0);
   const owe = list.reduce((s, g) => s + Math.max(0, -g.netPoisha), 0);
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-soft">
+    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-paper-muted/40 bg-paper text-ink shadow-soft">
       <div className="px-5 py-5">
-        <p className="text-[13px] font-medium text-slate-500">{t('balance.youAreSupposedToGet')}</p>
-        <Taka poisha={owed} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owed ? 'text-owed' : 'text-slate-400')} />
+        <p className="text-[13px] font-medium text-ink-soft">{t('balance.youAreSupposedToGet')}</p>
+        <Taka poisha={owed} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owed ? 'text-owed' : 'text-ink-soft/40')} />
       </div>
-      <div className="border-l border-slate-100 px-5 py-5">
-        <p className="text-[13px] font-medium text-slate-500">{t('balance.youNeedToGive')}</p>
-        <Taka poisha={owe} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owe ? 'text-owe' : 'text-slate-400')} />
+      <div className="border-l border-paper-muted px-5 py-5">
+        <p className="text-[13px] font-medium text-ink-soft">{t('balance.youNeedToGive')}</p>
+        <Taka poisha={owe} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owe ? 'text-owe' : 'text-ink-soft/40')} />
       </div>
     </div>
   );

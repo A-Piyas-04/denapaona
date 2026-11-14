@@ -3,18 +3,17 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/format';
 
-/** The figure a money screen is about: big, coloured, with one line of meaning. */
 export function StatHero({ label, value, sub, action, tone = 'neutral', className, ...rest }: {
   label: ReactNode; value: ReactNode; sub?: ReactNode; action?: ReactNode;
   tone?: 'neutral' | 'owe' | 'owed'; className?: string; 'data-tour'?: string;
 }) {
   return (
-    <div className={cn('rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft', className)} {...rest}>
-      <p className={cn('text-[14px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-slate-500')}>{label}</p>
+    <div className={cn('rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft', className)} {...rest}>
+      <p className={cn('text-[14px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-ink-soft')}>{label}</p>
       <div className="mt-1 font-display text-[36px] font-semibold leading-tight tracking-tight text-ink tnum">{value}</div>
       {(sub || action) && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          {sub && <div className="text-[14px] text-slate-500">{sub}</div>}
+          {sub && <div className="text-[14px] text-ink-soft">{sub}</div>}
           {action}
         </div>
       )}
@@ -24,17 +23,16 @@ export function StatHero({ label, value, sub, action, tone = 'neutral', classNam
 
 export interface ActionItem { icon: LucideIcon; label: string; to?: string; onClick?: () => void; 'data-tour'?: string }
 
-/** A row of 2–4 shortcuts, each an icon with a short label — thumb-friendly. */
 export function ActionBar({ items, className, ...rest }: { items: ActionItem[]; className?: string; 'data-tour'?: string }) {
   return (
     <div className={cn('grid gap-2', items.length === 4 ? 'grid-cols-4' : items.length === 3 ? 'grid-cols-3' : 'grid-cols-2', className)} {...rest}>
       {items.map(({ icon: Icon, label, to, onClick, ...r }) => {
         const inner = (
           <>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-brand shadow-soft transition-colors group-hover:border-brand/35">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-night-line bg-night-elev text-brand transition-colors group-hover:border-brand/40">
               <Icon size={22} strokeWidth={1.9} aria-hidden />
             </span>
-            <span className="text-[12px] font-semibold text-slate-700">{label}</span>
+            <span className="text-[12px] font-semibold text-cream/75">{label}</span>
           </>
         );
         const cls = 'group pressable flex flex-col items-center gap-1.5 rounded-2xl py-1';
@@ -46,7 +44,6 @@ export function ActionBar({ items, className, ...rest }: { items: ActionItem[]; 
   );
 }
 
-/** Keeps the selected tab in the URL, so Back and refresh land on the same tab. */
 export function useTabParam<T extends string>(key: string, fallback: T, allowed: readonly T[]): [T, (v: T) => void] {
   const [params, setParams] = useSearchParams();
   const raw = params.get(key) as T | null;
@@ -61,7 +58,7 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
   value: T; onChange: (v: T) => void; items: { id: T; label: string; count?: number }[]; label: string; className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={cn('flex gap-0.5 border-b border-slate-200/90', className)}>
+    <div role="tablist" aria-label={label} className={cn('flex gap-0.5 border-b border-night-line', className)}>
       {items.map((it) => {
         const active = it.id === value;
         return (
@@ -73,14 +70,14 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
             onClick={() => onChange(it.id)}
             className={cn(
               'pressable relative -mb-px inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-3 sm:text-[15px]',
-              active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800',
+              active ? 'text-paper' : 'text-cream/45 hover:text-cream/80',
             )}
           >
             <span className="truncate">{it.label}</span>
             {it.count !== undefined && it.count > 0 && (
               <span className={cn(
                 'min-w-[20px] rounded-full px-1.5 text-center text-[12px] leading-5',
-                active ? 'bg-brand text-white' : 'bg-slate-200 text-slate-700',
+                active ? 'bg-brand text-brand-fg' : 'bg-night-elev text-cream/70',
               )}>
                 {it.count}
               </span>
@@ -99,7 +96,6 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
   );
 }
 
-/** Floating primary action, sitting above the bottom nav (thumb zone). */
 export function Fab({ to, label, icon: Icon, ...rest }: { to: string; label: string; icon: LucideIcon; 'data-tour'?: string }) {
   return (
     <div
@@ -109,7 +105,7 @@ export function Fab({ to, label, icon: Icon, ...rest }: { to: string; label: str
       <Link
         to={to}
         {...rest}
-        className="pressable pointer-events-auto inline-flex h-14 items-center gap-2 rounded-2xl bg-brand pl-4 pr-5 text-[16px] font-semibold text-white shadow-float hover:bg-brand-hover"
+        className="pressable pointer-events-auto inline-flex h-14 items-center gap-2 rounded-2xl bg-brand pl-4 pr-5 text-[16px] font-semibold text-brand-fg shadow-gold hover:bg-brand-hover"
       >
         <Icon size={22} strokeWidth={2.2} aria-hidden />
         {label}
@@ -118,14 +114,13 @@ export function Fab({ to, label, icon: Icon, ...rest }: { to: string; label: str
   );
 }
 
-/** One-line notice with an icon and an optional link. */
 export function Banner({ icon: Icon, children, to, tone = 'neutral', action }: {
   icon?: LucideIcon; children: ReactNode; to?: string; tone?: 'neutral' | 'pending' | 'brand' | 'owe'; action?: ReactNode;
 }) {
   const tones = {
-    neutral: 'bg-slate-100 text-slate-700',
+    neutral: 'bg-night-elev text-cream/85',
     pending: 'bg-pending-soft text-pending',
-    brand: 'bg-brand-soft text-brand-ink',
+    brand: 'bg-brand-muted text-brand',
     owe: 'bg-owe-soft text-owe',
   } as const;
   const inner = (
@@ -140,7 +135,6 @@ export function Banner({ icon: Icon, children, to, tone = 'neutral', action }: {
   return to ? <Link to={to} className={cls}>{inner}</Link> : <div className={cls} role="status">{inner}</div>;
 }
 
-/** The primary form action, kept in reach above the keyboard and the nav. */
 export function StickyFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div

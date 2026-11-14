@@ -7,35 +7,47 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior: none;
+    color-scheme: dark;
   }
   body {
-    @apply bg-canvas font-sans text-[16px] leading-normal text-slate-900 antialiased;
+    @apply font-sans text-[16px] leading-normal antialiased;
+    background-color: #12100E;
+    color: #F3E6C8;
     overflow-x: hidden;
     overscroll-behavior: none;
     font-feature-settings: 'kern';
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(10, 107, 97, 0.07), transparent 55%),
-      radial-gradient(ellipse 55% 35% at 100% 100%, rgba(15, 122, 74, 0.04), transparent 50%);
+      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(240, 180, 41, 0.14), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(217, 75, 50, 0.08), transparent 50%),
+      radial-gradient(ellipse 45% 35% at 0% 80%, rgba(47, 143, 91, 0.07), transparent 45%);
     background-attachment: fixed;
   }
   @media (min-width: 640px) {
-    body { background-color: #E4EBE9; }
+    body { background-color: #0A0908; }
   }
-  h1, h2, h3 { @apply font-display tracking-[-0.015em]; text-wrap: balance; }
-  /* Stories §12.5: the focused field scrolls into view above the keyboard. */
+  h1, h2, h3 {
+    @apply font-display;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
   input, textarea { scroll-margin-bottom: 7rem; }
-  :focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 2px; }
-  /* Native feel: no long-press select on chrome controls. */
+  :focus-visible {
+    outline: 2px solid #F0B429;
+    outline-offset: 2px;
+  }
   button, [role="button"], [role="tab"], a.pressable { user-select: none; }
 }
 
 @layer components {
   .app-frame {
-    @apply mx-auto flex min-h-[100dvh] max-w-app flex-col bg-transparent;
+    @apply mx-auto flex min-h-[100dvh] max-w-app flex-col;
+    background-color: #12100E;
   }
   @media (min-width: 640px) {
     .app-frame {
-      @apply border-x border-slate-200/70 bg-canvas/90 shadow-soft;
+      @apply shadow-float;
+      border-left: 1px solid rgba(58, 52, 44, 0.8);
+      border-right: 1px solid rgba(58, 52, 44, 0.8);
     }
   }
   .safe-top { padding-top: env(safe-area-inset-top); }
@@ -64,29 +76,59 @@
   .animate-page-enter { opacity: 1 !important; transform: none !important; }
 }
 
-/* Guided tour (driver.js), themed to the app tokens. */
+/* Guided tour */
 .driver-popover.hn-tour {
-  @apply max-w-[19rem] rounded-2xl border border-slate-200 bg-white p-5 font-sans text-slate-900 shadow-float;
+  max-width: 19rem;
+  border-radius: 1rem;
+  border: 1px solid #3A342C;
+  background: #1C1814;
+  padding: 1.25rem;
+  color: #F3E6C8;
+  box-shadow: 0 14px 36px -12px rgba(0, 0, 0, 0.55);
+  font-family: Figtree, "Hind Siliguri", system-ui, sans-serif;
 }
-.driver-popover.hn-tour .driver-popover-title { @apply font-display text-[17px] font-semibold leading-snug text-slate-900; }
-.driver-popover.hn-tour .driver-popover-description { @apply mt-1.5 text-[15px] leading-relaxed text-slate-600; }
-.driver-popover.hn-tour .driver-popover-progress-text { @apply text-[13px] text-slate-500; }
-.driver-popover.hn-tour .driver-popover-footer { @apply mt-4 items-center gap-2; }
-.driver-popover.hn-tour .driver-popover-navigation-btns { @apply gap-2; }
+.driver-popover.hn-tour .driver-popover-title {
+  font-family: "Hind Siliguri", Figtree, system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #FFF8EE;
+}
+.driver-popover.hn-tour .driver-popover-description {
+  margin-top: 0.375rem;
+  font-size: 15px;
+  line-height: 1.625;
+  color: rgba(243, 230, 200, 0.7);
+}
+.driver-popover.hn-tour .driver-popover-progress-text { font-size: 13px; color: rgba(243, 230, 200, 0.5); }
+.driver-popover.hn-tour .driver-popover-footer { margin-top: 1rem; align-items: center; gap: 0.5rem; }
+.driver-popover.hn-tour .driver-popover-navigation-btns { gap: 0.5rem; }
 .driver-popover.hn-tour .driver-popover-footer button {
-  @apply pressable h-9 rounded-xl border-0 px-3.5 font-sans text-sm font-semibold;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  border: 0;
+  padding: 0 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   text-shadow: none;
 }
-.driver-popover.hn-tour .driver-popover-next-btn { @apply bg-brand text-white hover:bg-brand-hover; }
-.driver-popover.hn-tour .driver-popover-prev-btn { @apply bg-slate-100 text-slate-700 hover:bg-slate-200; }
+.driver-popover.hn-tour .driver-popover-next-btn { background: #F0B429; color: #1A1510; }
+.driver-popover.hn-tour .driver-popover-prev-btn { background: #26211C; color: #F3E6C8; }
 .driver-popover.hn-tour .driver-popover-close-btn {
-  @apply right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700;
+  right: 0.5rem;
+  top: 0.5rem;
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-size: 1.125rem;
+  color: rgba(243, 230, 200, 0.4);
 }
-.driver-popover.hn-tour .driver-popover-close-btn:focus-visible { outline: none; @apply bg-slate-100 text-slate-700; }
-.driver-popover.hn-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: white; }
-.driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: white; }
-.driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: white; }
-.driver-popover.hn-tour .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: white; }
-.hn-tour-progress { @apply mb-1 text-[12px] font-semibold text-brand; }
-.hn-tour-skip { @apply mr-auto text-sm font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline; }
-.hn-tour-hint { @apply mt-2 flex items-center gap-1.5 text-[13px] font-medium text-brand; }
+.driver-popover.hn-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #1C1814; }
+.driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #1C1814; }
+.driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #1C1814; }
+.driver-popover.hn-tour .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: #1C1814; }
+.hn-tour-progress { margin-bottom: 0.25rem; font-size: 12px; font-weight: 600; color: #F0B429; }
+.hn-tour-skip { margin-right: auto; font-size: 0.875rem; font-weight: 500; color: rgba(243, 230, 200, 0.5); }
+.hn-tour-hint { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.375rem; font-size: 13px; font-weight: 500; color: #F0B429; }

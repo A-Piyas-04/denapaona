@@ -12,7 +12,7 @@ export function useShareInvite(groupName: string, code: string) {
   return async function share() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: groupName, text: `Join “${groupName}” on HishebNama`, url });
+        await navigator.share({ title: groupName, text: `Join “${groupName}” on দেনা পাওনা`, url });
         return;
       }
     } catch { /* user cancelled — fall through to copy */ }

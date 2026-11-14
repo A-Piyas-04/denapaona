@@ -7,7 +7,8 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 const en = {
-  'app.name': 'HishebNama',
+  'app.name': 'দেনা পাওনা',
+  'app.nameRoman': 'Dena Pauna',
   'app.tagline': 'Shared spending, settled fairly. Nothing changes without your OK.',
   'auth.google': 'Continue with Google',
   'auth.signOut': 'Sign out',
@@ -66,6 +67,8 @@ const en = {
 export type StringKey = keyof typeof en;
 
 const bn: Partial<Record<StringKey, string>> = {
+  'app.name': 'দেনা পাওনা',
+  'app.nameRoman': 'Dena Pauna',
   'app.tagline': 'যৌথ খরচ, ন্যায্য হিসাব। আপনার সম্মতি ছাড়া কিছুই বদলায় না।',
   'auth.google': 'Google দিয়ে চালিয়ে যান',
   'auth.signOut': 'সাইন আউট',
