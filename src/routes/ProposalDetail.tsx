@@ -48,12 +48,10 @@ export function ProposalDetail() {
   const mine = parts.find((x) => x.user_id === me);
   const pending = p.status === 'pending' && new Date(p.expires_at) > new Date();
   const canDecide = pending && mine?.decision === 'pending';
-  const leaderRecorded = (p.payload as SettlementPayload).leader_recorded;
   const type = PROPOSAL_TYPE[p.type];
   const TypeIcon = type.icon;
   const agreed = parts.filter((x) => x.decision === 'approved').length;
-  const outcome = leaderRecorded ? `Recorded by ${name(p.proposer_id)} (trip leader). No approval needed inside an active trip.`
-    : proposalOutcome(p.status === 'pending' ? 'expired' : p.status, p.type);
+  const outcome = proposalOutcome(p.status === 'pending' ? 'expired' : p.status, p.type);
 
   async function act(kind: 'approve' | 'reject' | 'cancel') {
     setBusy(kind);

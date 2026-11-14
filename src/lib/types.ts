@@ -63,9 +63,9 @@ export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | '
 export type Decision = 'pending' | 'approved' | 'rejected';
 
 export interface TransferPayload { debtor: UUID; intermediary: UUID; creditor: UUID; amount: number }
-export interface AmendmentPayload { from_user: UUID; to_user: UUID; amount: number; direction: 'increase' | 'decrease'; trip_id?: UUID | null }
-export interface SettlementPayload { debtor: UUID; creditor: UUID; amount: number; trip_id?: UUID | null; leader_recorded?: boolean }
-export interface VoidPayload { expense_id: UUID; trip_id: UUID | null }
+export interface AmendmentPayload { from_user: UUID; to_user: UUID; amount: number; direction: 'increase' | 'decrease' }
+export interface SettlementPayload { debtor: UUID; creditor: UUID; amount: number }
+export interface VoidPayload { expense_id: UUID }
 
 export interface ProposalParticipant {
   proposal_id: UUID;
@@ -91,7 +91,6 @@ export interface Proposal {
 
 export interface UserNet { group_id: UUID; user_id: UUID; net_poisha: number }
 export interface PairwiseNet { group_id: UUID; from_user: UUID; to_user: UUID; owed_poisha: number }
-export interface TripNetPosition { user_id: UUID; display_name: string; net_poisha: number }
 
 export interface DerivationRow {
   entry_id: UUID;
@@ -106,11 +105,7 @@ export interface DerivationRow {
     rounding_note?: string | null;
     split_kind?: 'even' | 'rounding' | 'manual';
     got_extra_poisha?: boolean;
-    entered_by_leader?: boolean;
-    open_disputes?: number;
-    leader_recorded?: boolean;
     note?: string | null;
-    trip_id?: UUID | null;
     [k: string]: unknown;
   };
 }

@@ -29,7 +29,7 @@ const GATEWAY_PORT = 54341;
 const APP_PORT = Number(process.env.PORT) || 5173;
 const SECRET = 'local-demo-jwt-secret-at-least-32-characters-long';
 // Bump when scripts/demo-seed.sql changes, so an older demo database says so.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 const reset = process.argv.includes('--reset');
 const native = process.argv.includes('--native');
 
@@ -42,10 +42,10 @@ const EXE = WIN ? '.exe' : '';
 
 // What each demo user is good for trying.  Shown on the sign-in page and in DEMO.md.
 const ROLES = {
-  Arif: 'Owner of Hall 3 Friends, leader of the Cox’s Bazar trip. Has a payment to confirm.',
-  Sami: 'On the Cox’s Bazar trip but not a leader. Sent a transfer; has a cancellation to approve.',
-  Rafi: 'Trip leader: can record payments and fix entries. Has a cancellation to approve.',
-  Nadia: 'Owner of Flat 4B. Questioned an expense. Has a payment to confirm.',
+  Arif: 'Owner of Hall 3 Friends. Has a payment to confirm.',
+  Sami: 'Owner of Badminton Club. Sent a transfer; has a cancellation to approve.',
+  Rafi: 'Has a transfer and a cancellation to approve.',
+  Nadia: 'Owner of Flat 4B. Has a payment to confirm.',
   Imran: 'Owner of Office Lunch. Has a payment to confirm and a request to approve.',
   Mitu: 'In three groups. Sent a payment; has a cancellation to approve.',
   Joya: 'Has a correction waiting for her approval.',

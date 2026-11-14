@@ -14,7 +14,7 @@ declare
   rafi uuid := t.new_user('Rafi');   nadia uuid := t.new_user('Nadia');
   tania uuid := t.new_user('Tania'); nabil uuid := t.new_user('Nabil');
   outsider uuid := t.new_user('Outsider');
-  g1 uuid; g2 uuid; code text; trip1 uuid; trip2 uuid; e uuid;
+  g1 uuid; g2 uuid; code text; e uuid;
 begin
   insert into t.ids values ('arif', arif), ('sami', sami), ('rafi', rafi),
     ('nadia', nadia), ('tania', tania), ('nabil', nabil), ('outsider', outsider);
@@ -46,16 +46,11 @@ begin
   e := public.add_expense(g1, rafi, 2000, 'Tea',
          jsonb_build_array(jsonb_build_object('user_id', arif, 'share', 2000)));
   insert into t.ids values ('e_arif_rafi', e);
-
-  -- A trip in g1 led by Arif and Tania
-  perform t.login(arif);
-  trip1 := public.create_trip(g1, 'Sylhet Tour', array[sami, nadia, tania], array[tania]);
-  insert into t.ids values ('trip1', trip1);
 end $$;
 
--- g2 needs a second member so a valid foreign trip and foreign expense exist.
+-- g2 needs a second member so a valid foreign expense exists.
 do $$
-declare foreign_user uuid := t.new_user('Foreigner'); code text; trip2 uuid; e uuid;
+declare foreign_user uuid := t.new_user('Foreigner'); code text; e uuid;
 begin
   insert into t.ids values ('foreigner', foreign_user);
   select invite_code into code from public.groups where id = t.id('g2');
@@ -63,8 +58,6 @@ begin
   perform public.join_group(code);
 
   perform t.login(t.id('outsider'));
-  trip2 := public.create_trip(t.id('g2'), 'Elsewhere', array[foreign_user]);
-  insert into t.ids values ('trip2', trip2);
   e := public.add_expense(t.id('g2'), t.id('outsider'), 5000, 'Foreign dinner',
          jsonb_build_array(jsonb_build_object('user_id', foreign_user, 'share', 5000)));
   insert into t.ids values ('e_foreign', e);

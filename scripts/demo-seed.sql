@@ -2,8 +2,8 @@
 -- Never run this against a real project.
 --
 -- Everything financial goes through the real RPCs (create_group, add_expense,
--- propose_*, respond_to_proposal, void_expense, …) as the right user, so every
--- balance, approval and leader action is exactly what the app would produce.
+-- propose_*, respond_to_proposal, propose_void, …) as the right user, so every
+-- balance and approval is exactly what the app would produce.
 -- The one exception is demo.ago(): to make the history span a few weeks, it
 -- moves every timestamp written so far back in time, uniformly, with triggers
 -- off.  Order between rows never changes.
@@ -33,11 +33,7 @@ begin
   update public.profiles              set created_at   = created_at - p;
   update public.groups                set created_at   = created_at - p;
   update public.group_members         set joined_at    = joined_at - p;
-  update public.trips                 set created_at   = created_at - p;
-  update public.trip_leaders          set appointed_at = appointed_at - p;
-  update public.trip_leader_log       set created_at   = created_at - p;
   update public.expenses              set created_at   = created_at - p, voided_at = voided_at - p;
-  update public.entry_disputes        set created_at   = created_at - p;
   update public.ledger_entries        set created_at   = created_at - p;
   update public.proposals             set created_at   = created_at - p, expires_at = expires_at - p,
                                           resolved_at  = resolved_at - p;
@@ -60,7 +56,7 @@ end $$;
 
 -- Equal split, remainder poisha in the same fixed order as src/lib/money.ts.
 create function demo.spend(p_group text, p_actor text, p_payer text, p_taka numeric, p_desc text,
-                           p_people text[], p_trip text default null) returns uuid
+                           p_people text[]) returns uuid
 language plpgsql as $$
 declare
   total  bigint := round(p_taka * 100);
@@ -76,12 +72,12 @@ begin
     i := i + 1;
   end loop;
   perform demo.act(p_actor);
-  return public.add_expense(demo.id(p_group), demo.u(p_payer), total, p_desc, shares, demo.id(p_trip));
+  return public.add_expense(demo.id(p_group), demo.u(p_payer), total, p_desc, shares);
 end $$;
 
 -- Itemised split: {"Name": taka, ...}.  The total is the sum of the shares.
 create function demo.spend_by(p_group text, p_actor text, p_payer text, p_desc text,
-                              p_items jsonb, p_trip text default null) returns uuid
+                              p_items jsonb) returns uuid
 language plpgsql as $$
 declare shares jsonb := '[]'; total bigint := 0; k text; v numeric;
 begin
@@ -90,7 +86,7 @@ begin
     total := total + round(v * 100);
   end loop;
   perform demo.act(p_actor);
-  return public.add_expense(demo.id(p_group), demo.u(p_payer), total, p_desc, shares, demo.id(p_trip));
+  return public.add_expense(demo.id(p_group), demo.u(p_payer), total, p_desc, shares);
 end $$;
 
 -- A settlement for a share of what is currently owed, in whole taka.
@@ -133,18 +129,6 @@ begin
   perform public.respond_to_proposal(p_proposal, p_approve);
 end $$;
 
-create function demo.trip(p_key text, p_group text, p_actor text, p_name text, p_members text[],
-                          p_leaders text[], p_mode text) returns void
-language plpgsql as $$
-begin
-  perform demo.act(p_actor);
-  perform demo.keep(p_key, public.create_trip(
-    demo.id(p_group), p_name,
-    (select array_agg(demo.u(x)) from unnest(p_members) x),
-    coalesce((select array_agg(demo.u(x)) from unnest(p_leaders) x), '{}'),
-    p_mode));
-end $$;
-
 -- ── people ──────────────────────────────────────────────────────────────
 select t.new_user('Arif');
 select t.new_user('Sami');
@@ -172,20 +156,16 @@ select demo.ago('5 hours');
 select demo.spend('hall3', 'Sami', 'Sami', 1600, 'Movie tickets', array['Arif', 'Sami', 'Nadia', 'Imran']);
 select demo.ago('1 day 2 hours');
 
--- Sylhet weekend: a trip that is already closed (anyone could add).
-select demo.trip('sylhet', 'hall3', 'Rafi', 'Sylhet Weekend', array['Arif', 'Sami', 'Rafi', 'Imran'], array['Sami'], 'open');
+-- Sylhet weekend.
 select demo.ago('3 hours');
-select demo.spend('hall3', 'Rafi', 'Rafi', 2800, 'Train tickets', array['Arif', 'Sami', 'Rafi', 'Imran'], 'sylhet');
+select demo.spend('hall3', 'Rafi', 'Rafi', 2800, 'Train tickets to Sylhet', array['Arif', 'Sami', 'Rafi', 'Imran']);
 select demo.ago('4 hours');
-select demo.spend('hall3', 'Sami', 'Sami', 6000, 'Hotel Rose View', array['Arif', 'Sami', 'Rafi', 'Imran'], 'sylhet');
+select demo.spend('hall3', 'Sami', 'Sami', 6000, 'Hotel Rose View', array['Arif', 'Sami', 'Rafi', 'Imran']);
 select demo.ago('5 hours');
-select demo.spend('hall3', 'Imran', 'Imran', 1200, 'Tea garden tour', array['Arif', 'Sami', 'Rafi', 'Imran'], 'sylhet');
+select demo.spend('hall3', 'Imran', 'Imran', 1200, 'Tea garden tour', array['Arif', 'Sami', 'Rafi', 'Imran']);
 select demo.ago('3 hours');
-select demo.spend_by('hall3', 'Arif', 'Arif', 'Dinner at Panshi', '{"Arif": 520, "Sami": 410, "Rafi": 450, "Imran": 470}', 'sylhet');
-select demo.ago('1 day');
-select demo.act('Rafi');
-select public.close_trip(demo.id('sylhet'));
-select demo.ago('2 days');
+select demo.spend_by('hall3', 'Arif', 'Arif', 'Dinner at Panshi', '{"Arif": 520, "Sami": 410, "Rafi": 450, "Imran": 470}');
+select demo.ago('3 days');
 
 select demo.spend('office', 'Imran', 'Imran', 1500, 'Biryani Friday', array['Imran', 'Arif', 'Sami', 'Joya', 'Mitu']);
 select demo.ago('1 day');
@@ -275,48 +255,28 @@ select demo.ago('2 hours');
 select demo.respond(demo.id('r6'), 'Sami', true);
 select demo.ago('3 days');
 
--- ── last week: Cox's Bazar, a trip still in progress ───────────────────
-select demo.trip('cox', 'hall3', 'Arif', 'Cox''s Bazar Tour', array['Arif', 'Sami', 'Rafi', 'Nadia'], array['Rafi'], 'leaders_only');
-select demo.ago('1 hour');
-select demo.act('Arif');
-select public.add_trip_leader(demo.id('cox'), demo.u('Nadia'));
-select demo.ago('2 hours');
-select demo.spend('hall3', 'Arif', 'Arif', 4800, 'Bus tickets, Green Line', array['Arif', 'Sami', 'Rafi', 'Nadia'], 'cox');
+-- ── last week: Cox's Bazar ─────────────────────────────────────────────
+select demo.spend('hall3', 'Arif', 'Arif', 4800, 'Bus tickets to Cox''s Bazar', array['Arif', 'Sami', 'Rafi', 'Nadia']);
 select demo.ago('6 hours');
-select demo.spend('hall3', 'Rafi', 'Rafi', 9600, 'Hotel Sea Crown, 2 nights', array['Arif', 'Sami', 'Rafi', 'Nadia'], 'cox');
-select demo.ago('3 hours');
-select demo.act('Nadia');
-select public.remove_trip_leader(demo.id('cox'), demo.u('Nadia'));
-select demo.ago('2 hours');
-select demo.spend_by('hall3', 'Arif', 'Arif', 'Seafood dinner', '{"Arif": 780, "Sami": 920, "Rafi": 860, "Nadia": 700}', 'cox');
+select demo.spend('hall3', 'Rafi', 'Rafi', 9600, 'Hotel Sea Crown, 2 nights', array['Arif', 'Sami', 'Rafi', 'Nadia']);
+select demo.ago('5 hours');
+select demo.spend_by('hall3', 'Arif', 'Arif', 'Seafood dinner', '{"Arif": 780, "Sami": 920, "Rafi": 860, "Nadia": 700}');
 select demo.ago('12 hours');
-select demo.spend('hall3', 'Arif', 'Sami', 1100, 'Breakfast', array['Arif', 'Sami', 'Rafi', 'Nadia'], 'cox');
+select demo.spend('hall3', 'Arif', 'Sami', 1100, 'Breakfast', array['Arif', 'Sami', 'Rafi', 'Nadia']);
 select demo.ago('3 hours');
-select demo.keep('jetski', demo.spend('hall3', 'Rafi', 'Rafi', 2500, 'Jet ski', array['Rafi', 'Sami', 'Nadia'], 'cox'));
+select demo.spend('hall3', 'Rafi', 'Rafi', 2500, 'Jet ski', array['Rafi', 'Sami', 'Nadia']);
 select demo.ago('2 hours');
-select demo.spend('hall3', 'Rafi', 'Rafi', 400, 'Auto rickshaw to Himchari', array['Arif', 'Sami', 'Rafi', 'Nadia'], 'cox');
+select demo.spend('hall3', 'Rafi', 'Rafi', 400, 'Auto rickshaw to Himchari', array['Arif', 'Sami', 'Rafi', 'Nadia']);
 select demo.ago('4 hours');
--- A typo, voided by a leader and entered again.
-select demo.keep('souv1', demo.spend('hall3', 'Arif', 'Nadia', 1500, 'Souvenirs', array['Nadia', 'Sami'], 'cox'));
-select demo.ago('1 hour');
-select demo.act('Arif');
-select public.void_expense(demo.id('souv1'), 'Typed 1500, was 1050');
-select demo.ago('5 minutes');
-select demo.spend('hall3', 'Arif', 'Nadia', 1050, 'Souvenirs', array['Nadia', 'Sami'], 'cox');
-select demo.ago('3 hours');
--- Nadia questions the jet ski: a flag, no balance change.
-select demo.act('Nadia');
-select public.raise_dispute(demo.id('jetski'), 'I only watched, I didn''t ride');
-select demo.ago('6 hours');
-select demo.spend('hall3', 'Rafi', 'Sami', 600, 'Beach chairs', array['Arif', 'Sami', 'Rafi', 'Nadia'], 'cox');
+select demo.spend('hall3', 'Arif', 'Nadia', 1050, 'Souvenirs', array['Nadia', 'Sami']);
+select demo.ago('9 hours');
+select demo.spend('hall3', 'Rafi', 'Sami', 600, 'Beach chairs', array['Arif', 'Sami', 'Rafi', 'Nadia']);
 select demo.ago('1 day');
--- A leader records a repayment straight away, inside the trip.
-select demo.act('Rafi');
-select public.leader_record_settlement(
-  demo.id('cox'), demo.u('Sami'), demo.u('Rafi'),
-  greatest(100, (floor(public.trip_net_owed_raw(demo.id('cox'), demo.u('Sami'), demo.u('Rafi')) / 200) * 100)::bigint),
-  'Paid cash at the hotel');
-select demo.ago('1 day 4 hours');
+-- Sami pays Rafi back half; Rafi confirms.
+select demo.keep('r7', demo.settle('hall3', 'Sami', 'Sami', 'Rafi', 0.5, 'Paid cash at the hotel'));
+select demo.ago('1 hour');
+select demo.respond(demo.id('r7'), 'Rafi', true);
+select demo.ago('1 day 3 hours');
 
 -- ── yesterday and today ────────────────────────────────────────────────
 select demo.spend('flat', 'Mitu', 'Mitu', 1600, 'Cleaning help', array['Nadia', 'Mitu', 'Joya', 'Arif']);
@@ -353,13 +313,6 @@ select demo.ago('20 minutes');
 select demo.settle('hall3', 'Nadia', 'Nadia', 'Arif', 0.5, 'Half now, rest after payday'); -- Arif
 select demo.ago('15 minutes');
 
--- Trip dates follow the (shifted) activity.
-select set_config('session_replication_role', 'replica', false);
-update public.trips set started_on = created_at::date;
-update public.trips tr set ended_on = (select max(l.created_at)::date from public.trip_leader_log l
-                                       where l.trip_id = tr.id and l.action = 'trip_closed')
-  where status = 'closed';
-select set_config('session_replication_role', 'origin', false);
 select t.login(null);
 
 drop schema demo cascade;

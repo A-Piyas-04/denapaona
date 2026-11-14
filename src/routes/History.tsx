@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { Ban, History as HistoryIcon, Star } from 'lucide-react';
+import { Ban, History as HistoryIcon } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { ExpenseRow } from '@/components/ExpenseRow';
 import { PROPOSAL_TYPE } from '@/components/ProposalCard';
@@ -8,11 +8,10 @@ import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
 import { Taka } from '@/components/Money';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
-import { useAttribution, useHistory, type HistoryItem } from '@/hooks/useGroupLedger';
+import { useHistory, type HistoryItem } from '@/hooks/useGroupLedger';
 import { useRealtimeGroup } from '@/hooks/useRealtimeProposals';
 import { proposalOutcome } from '@/lib/errors';
 import { describeProposal } from '@/lib/describe';
-import type { Attribution } from '@/lib/rpc';
 
 const FILTERS = ['all', 'expenses', 'agreements'] as const;
 type Filter = (typeof FILTERS)[number];
@@ -26,20 +25,17 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 
-const time = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-
 /** Story B-05 — the full immutable history.  Nothing is ever hidden. */
 export function History() {
   const { id: groupId = '' } = useParams();
   const me = useMe();
   useRealtimeGroup(groupId);
   const history = useHistory(groupId);
-  const attribution = useAttribution(groupId);
   const { name } = useNames(groupId);
   const [filter, setFilter] = useTabParam<Filter>('filter', 'all', FILTERS);
   const nm = (id: string | null | undefined) => name(id, { you: true });
   const all = history.data?.pages.flatMap((p) => p.items) ?? [];
-  const items = all.filter((i) => filter === 'all' || (filter === 'expenses' ? i.kind === 'expense' || i.kind === 'void' : i.kind === 'proposal' || i.kind === 'leader'));
+  const items = all.filter((i) => filter === 'all' || (filter === 'expenses' ? i.kind === 'expense' || i.kind === 'void' : i.kind === 'proposal'));
 
   const days: { label: string; items: HistoryItem[] }[] = [];
   for (const item of items) {
@@ -64,7 +60,7 @@ export function History() {
               <Section key={day.label} title={day.label}>
                 <ListGroup>
                   {day.items.map((item) => <Item key={item.id} item={item} groupId={groupId} me={me} nm={nm}
-                                                 plain={(id) => name(id)} attribution={attribution.data} />)}
+                                                 plain={(id) => name(id)} />)}
                 </ListGroup>
               </Section>
             ))}
@@ -79,47 +75,32 @@ export function History() {
   );
 }
 
-function Item({ item, groupId, me, nm, plain, attribution }: {
+function Item({ item, groupId, me, nm, plain }: {
   item: HistoryItem; groupId: string; me: string; nm: (id: string | null | undefined) => string;
-  plain: (id: string) => string; attribution?: Map<string, Attribution>;
+  plain: (id: string) => string;
 }) {
   if (item.kind === 'expense') {
-    return <ExpenseRow expense={item.expense} groupId={groupId} me={me} name={nm} attribution={attribution?.get(item.expense.id)} dateTile={false} />;
+    return <ExpenseRow expense={item.expense} groupId={groupId} me={me} name={nm} dateTile={false} />;
   }
   if (item.kind === 'void') {
     const e = item.expense;
-    const a = attribution?.get(e.id);
     return (
       <ListRow wrap to={`/groups/${groupId}/expenses/${e.id}`}
                leading={<IconTile><Ban size={20} /></IconTile>}
                title={<>Cancelled “{e.description}”</>}
-               subtitle={`${a?.voided_by_agreement ? 'By agreement' : `By ${nm(e.voided_by)}${a?.voided_by_leader ? ' (trip leader)' : ''}`}: ${e.void_reason}`}
+               subtitle={`By agreement: ${e.void_reason}`}
                trailing={<Taka poisha={e.total_poisha} className="text-[15px] text-slate-400 line-through" />} />
-    );
-  }
-  if (item.kind === 'leader') {
-    const l = item.log;
-    const text = {
-      appointed: `${nm(l.actor_id)} made ${nm(l.user_id)} a trip leader`,
-      removed: `${nm(l.actor_id)} removed ${nm(l.user_id)} as trip leader`,
-      trip_closed: `${nm(l.actor_id)} closed a trip`,
-      trip_reopened: `${nm(l.actor_id)} reopened a trip`,
-    }[l.action];
-    return (
-      <ListRow wrap to={`/trips/${l.trip_id}/leaders`} leading={<IconTile tone="amber"><Star size={20} /></IconTile>}
-               title={text} subtitle={time(item.at)} />
     );
   }
   const p = item.proposal;
   const type = PROPOSAL_TYPE[p.type];
   const Icon = type.icon;
   const tone = p.status === 'approved' ? 'owed' : p.status === 'pending' ? 'amber' : 'slate';
-  const leader = p.status === 'approved' && (p.payload as { leader_recorded?: boolean }).leader_recorded;
   return (
     <ListRow wrap to={`/proposals/${p.id}`}
              leading={<IconTile tone="brand"><Icon size={20} /></IconTile>}
              title={describeProposal(p, plain)}
-             subtitle={leader ? `Recorded by ${nm(p.proposer_id)} (trip leader)` : proposalOutcome(p.status, p.type)}
+             subtitle={proposalOutcome(p.status, p.type)}
              trailing={<Badge tone={tone}>{p.status === 'approved' ? 'Done' : p.status === 'pending' ? 'Pending' : p.status === 'rejected' ? 'Declined' : p.status === 'cancelled' ? 'Withdrawn' : p.status === 'expired' ? 'Expired' : 'Not possible'}</Badge>} />
   );
 }

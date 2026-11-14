@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeftRight, BellDot, HandCoins, History as HistoryIcon, Map as MapIcon, Plus, Receipt, Settings, Sparkles, UserPlus } from 'lucide-react';
+import { ArrowLeftRight, BellDot, HandCoins, History as HistoryIcon, Plus, Receipt, Settings, Sparkles, UserPlus } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { BalanceBreakdown, BalanceHero } from '@/components/BalanceCard';
 import { ExpenseRow } from '@/components/ExpenseRow';
@@ -12,9 +12,8 @@ import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
 import { Taka } from '@/components/Money';
 import { useMe } from '@/hooks/useAuth';
 import { useGroup, useMembers, useMyPairwise, useNames } from '@/hooks/useGroups';
-import { useAttribution, useExpenses, useRecentEntries } from '@/hooks/useGroupLedger';
+import { useExpenses, useRecentEntries } from '@/hooks/useGroupLedger';
 import { useGroupPending } from '@/hooks/useProposals';
-import { useTrips } from '@/hooks/useTrips';
 import { useRealtimeGroup } from '@/hooks/useRealtimeProposals';
 import { useLastSeen } from '@/hooks/useBrowser';
 import { useT } from '@/lib/i18n';
@@ -36,9 +35,7 @@ export function GroupDashboard() {
   const { name } = useNames(groupId);
   const pairwise = useMyPairwise(groupId);
   const expenses = useExpenses(groupId);
-  const attribution = useAttribution(groupId);
   const pending = useGroupPending(groupId);
-  const trips = useTrips(groupId);
 
   const [lastSeen, markSeen] = useLastSeen(`hn.seen.${groupId}.${me}`);
   const changes = useRecentEntries(groupId, me, lastSeen);
@@ -49,7 +46,6 @@ export function GroupDashboard() {
   const pairs = pairwise.data?.map((p) => ({ otherId: p.to_user, name: name(p.to_user), poisha: -p.owed_poisha }));
   const waitingOnMe = (pending.data ?? []).filter((p) =>
     p.proposal_participants?.some((pp) => pp.user_id === me && pp.decision === 'pending'));
-  const activeTrips = (trips.data ?? []).filter((tr) => tr.status === 'active');
   const changeNet = (changes.data ?? []).reduce((s, e) => s + (e.to_user === me ? e.amount_poisha : -e.amount_poisha), 0);
   const showInvite = group.data && (params.get('new') || (members.data && members.data.length < 2));
 
@@ -86,7 +82,6 @@ export function GroupDashboard() {
       <ActionBar data-tour="group-actions" items={[
         { icon: HandCoins, label: t('action.settleUp'), to: `/groups/${groupId}/settle` },
         { icon: ArrowLeftRight, label: t('action.transfer'), to: `/groups/${groupId}/transfer` },
-        { icon: MapIcon, label: t('action.trips'), to: `/groups/${groupId}/trips` },
         { icon: HistoryIcon, label: t('action.history'), to: `/groups/${groupId}/history` },
       ]} />
 
@@ -101,22 +96,13 @@ export function GroupDashboard() {
 
         {tab === 'activity' && (
           <div className="space-y-3">
-            {activeTrips.length > 0 && (
-              <ListGroup>
-                {activeTrips.map((tr) => (
-                  <ListRow key={tr.id} to={`/trips/${tr.id}`} leading={<IconTile tone="brand"><MapIcon size={20} /></IconTile>}
-                           title={tr.name} subtitle="Trip in progress" trailing={<Badge tone="brand">Active</Badge>} />
-                ))}
-              </ListGroup>
-            )}
             {expenses.isLoading ? <ListSkeleton /> : (expenses.data?.length ?? 0) === 0 ? (
               <EmptyState icon={Receipt} title="No expenses yet" body="Add the first one. It takes ten seconds." />
             ) : (
               <>
                 <ListGroup>
                   {expenses.data!.slice(0, 5).map((e) => (
-                    <ExpenseRow key={e.id} expense={e} groupId={groupId} me={me} name={(id) => name(id, { you: true })}
-                                attribution={attribution.data?.get(e.id)} />
+                    <ExpenseRow key={e.id} expense={e} groupId={groupId} me={me} name={(id) => name(id, { you: true })} />
                   ))}
                 </ListGroup>
                 {expenses.data!.length > 5 && (

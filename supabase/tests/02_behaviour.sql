@@ -65,9 +65,6 @@ begin
   perform t.login(t.id('sami'));   -- owes Arif ৳30 in g1
   perform t.expect_error(format('select public.leave_group(%L)', t.id('g1')), '%OUTSTANDING_BALANCE%',
                          'A-06#1: cannot leave with a non-zero balance');
-  perform t.login(t.id('tania'));  -- zero balance, but leads trip1
-  perform t.expect_error(format('select public.leave_group(%L)', t.id('g1')), '%STILL_AN_ACTIVE_TRIP_LEADER%',
-                         'A-06#3: active trip leader must hand over first');
 end $$;
 
 -- ── Epic B ─────────────────────────────────────────────────────────────────
@@ -147,10 +144,10 @@ begin
 
   -- §12.1: replayed request with the same client token returns the same expense.
   e  := public.add_expense(g, arif, 700, 'Retry me',
-          jsonb_build_array(jsonb_build_object('user_id', sami, 'share', 700)), null,
+          jsonb_build_array(jsonb_build_object('user_id', sami, 'share', 700)),
           '11111111-1111-1111-1111-111111111111');
   e2 := public.add_expense(g, arif, 700, 'Retry me',
-          jsonb_build_array(jsonb_build_object('user_id', sami, 'share', 700)), null,
+          jsonb_build_array(jsonb_build_object('user_id', sami, 'share', 700)),
           '11111111-1111-1111-1111-111111111111');
   perform t.assert_eq(e2, e, '§12.1: retried add_expense is idempotent');
   perform t.assert_eq((select count(*)::int from public.expenses where description = 'Retry me'), 1,
@@ -371,144 +368,10 @@ begin
   perform t.expect_error(format('select public.propose_void(%L, ''x'')', e), '%ALREADY_VOIDED%', 'B-06#5: already voided');
 end $$;
 
--- ── Epic D: trips and leaders ───────────────────────────────────────────────
-do $$
-declare g uuid := t.id('g1'); trip uuid := t.id('trip1'); e uuid; e2 uuid; p uuid; tr uuid;
-  arif uuid := t.id('arif'); sami uuid := t.id('sami'); nadia uuid := t.id('nadia');
-  tania uuid := t.id('tania'); nabil uuid := t.id('nabil'); rafi uuid := t.id('rafi');
-begin
-  -- D-01
-  perform t.assert(exists (select 1 from public.trip_leaders where trip_id = trip and user_id = arif),
-                   'D-01: creator is a leader');
-  perform t.assert_eq((select count(*)::int from public.trip_leader_log where trip_id = trip and action = 'appointed'),
-                      (select count(*)::int from public.trip_leaders where trip_id = trip),
-                      'D-01: one log row per initial leader');
-  perform t.login(arif);
-  tr := public.create_trip(g, 'Leader off roster', array[sami], array[nabil]);
-  perform t.assert(exists (select 1 from public.trip_members where trip_id = tr and user_id = nabil),
-                   'D-01#1: leader not on roster is added, never silently dropped');
-  perform t.expect_error(format('select public.create_trip(%L, ''x'', array[%L]::uuid[], array[%L]::uuid[])',
-                         g, sami, t.id('outsider')), '%LEADER_MUST_BE_GROUP_MEMBER%', 'D-01#2');
-  perform t.expect_error(format('select public.create_trip(%L, ''solo'', array[]::uuid[])', g),
-                         '%ROSTER_TOO_SMALL%', 'D-01#5: empty roster');
-
-  -- D-02 entry mode
-  perform t.login(sami);
-  perform t.expect_error(format($f$select public.add_expense(%L,%L,1000,'x',
-    jsonb_build_array(jsonb_build_object('user_id',%L,'share',1000)), %L)$f$, g, sami, arif, trip),
-    '%LEADERS_ONLY_TRIP%', 'D-02#1: non-leader on leaders_only trip');
-  perform t.expect_error(format('select public.set_trip_entry_mode(%L, ''open'')', trip),
-    '%NOT_A_TRIP_LEADER%', 'entry mode is leader-only');
-
-  -- D-03: 3 of N, by a leader (Tania), paid by Arif
-  perform t.login(tania);
-  e := public.add_expense(g, arif, 10000, 'Second vehicle', jsonb_build_array(
-         jsonb_build_object('user_id', arif,  'share', 3334),
-         jsonb_build_object('user_id', sami,  'share', 3333),
-         jsonb_build_object('user_id', nadia, 'share', 3333)), trip);
-  insert into t.ids values ('e_trip_vehicle', e);
-  perform t.assert_eq((select count(*)::int from public.ledger_entries where source_id = e), 2,
-                      'D-03: 3-of-N → exactly two entries');
-  perform t.assert((select bool_and(trip_id = trip) from public.ledger_entries where source_id = e),
-                   'D-02 acceptance: every entry carries the trip_id');
-
-  perform public.set_trip_entry_mode(trip, 'open');
-  perform t.login(sami);
-  e2 := public.add_expense(g, sami, 50000, 'Hotel', jsonb_build_array(
-          jsonb_build_object('user_id', sami, 'share', 25000),
-          jsonb_build_object('user_id', arif, 'share', 25000)), trip);
-  perform t.ok('D-02: any member may add on an open trip');
-  insert into t.ids values ('e_trip_hotel', e2);
-
-  -- D-07: corrections.  Non-leader (even the author) cannot void.
-  perform t.expect_error(format('select public.void_expense(%L, ''mine'')', e2),
-    '%NOT_AUTHORIZED_TO_VOID%', 'D-07#1: non-leader cannot void even own trip entry');
-  -- A void proposal pending when a leader voids directly → invalidated.
-  p := public.propose_void(e2, 'wrong hotel');
-  perform t.login(tania);
-  perform t.expect_error(format('select public.void_expense(%L, '''')', e2), '%VOID_REASON_REQUIRED%', 'D-07#4');
-  perform public.void_expense(e2, 'wrong amount');
-  perform t.expect_error(format('select public.void_expense(%L, ''again'')', e2), '%ALREADY_VOIDED%', 'D-07: no double void');
-  perform t.login(arif);
-  perform t.assert_eq(public.respond_to_proposal(p, true), 'invalidated', 'B-06#8 / C-08#4: void proposal invalidated');
-  perform t.assert_eq((select resolution_reason from public.proposals where id = p),
-                      'This expense was already cancelled', 'B-06#8: plain reason');
-  perform t.assert_eq((select coalesce(sum(case when to_user = sami then amount_poisha else -amount_poisha end), 0)
-                         from public.ledger_entries where source_id = e2)::bigint, 0::bigint,
-                      'D-07 / I8: leader-voided expense contributes zero');
-
-  -- D-08 leader settlement: trip has Sami owing Arif 3333.
-  perform t.login(tania);
-  perform t.expect_error(format('select public.leader_record_settlement(%L,%L,%L,4000)', trip, sami, arif),
-    '%EXCEEDS_TRIP_BALANCE%', 'D-08 acceptance: more than the trip created');
-  perform t.expect_error(format('select public.leader_record_settlement(%L,%L,%L,1)', trip, sami, sami),
-    '%PARTIES_MUST_DIFFER%', 'D-08#4');
-  p := public.leader_record_settlement(trip, sami, arif, 3000, 'cash at the station');
-  perform t.assert((select status = 'approved' and resolution_reason like 'Recorded by trip leader%'
-                      from public.proposals where id = p), 'D-08 acceptance: approved proposal naming the leader');
-  perform t.assert_eq(public.trip_net_owed_raw(trip, sami, arif), 333::bigint, 'D-08: trip balance reduced');
-
-  -- D-05 / D-06 leaders
-  perform t.login(sami);
-  perform t.expect_error(format('select public.add_trip_leader(%L,%L)', trip, sami), '%NOT_A_TRIP_LEADER%', 'D-05#1');
-  perform t.login(arif);
-  perform public.add_trip_leader(trip, nadia);
-  perform public.add_trip_leader(trip, nadia);
-  perform t.assert_eq((select count(*)::int from public.trip_leader_log
-                        where trip_id = trip and user_id = nadia and action = 'appointed'), 1,
-                      'D-05#2: re-appointing is a no-op with no extra log row');
-  perform t.expect_error(format('select public.add_trip_leader(%L,%L)', trip, t.id('outsider')),
-    '%LEADER_MUST_BE_GROUP_MEMBER%', 'D-05#3');
-  perform public.remove_trip_leader(trip, nadia);
-  perform public.remove_trip_leader(trip, tania);
-  perform t.expect_error(format('select public.remove_trip_leader(%L,%L)', trip, arif),
-    '%CANNOT_REMOVE_LAST_LEADER%', 'D-06#1: never leaderless');
-  perform public.add_trip_leader(trip, tania);
-
-  -- D-11 disputes
-  perform t.login(sami);
-  declare snap bigint := t.owes(g, 'sami', 'arif'); d uuid;
-  begin
-    d := public.raise_dispute(e, 'I was not in that vehicle');
-    perform public.raise_dispute(e, 'Really, I was not');
-    perform t.assert_eq((select count(*)::int from public.entry_disputes where expense_id = e), 1,
-                        'D-11#2: disputing twice updates the existing one');
-    perform t.assert_eq(t.owes(g, 'sami', 'arif'), snap, 'D-11 acceptance: dispute changes no balance');
-    perform t.login(arif);
-    perform t.expect_error(format('select public.withdraw_dispute(%L)', d), '%CANNOT_WITHDRAW_DISPUTE%',
-                           'only the raiser withdraws');
-    perform t.login(sami);
-    perform public.withdraw_dispute(d);
-    perform t.assert_eq((select status from public.entry_disputes where id = d), 'withdrawn', 'D-11#4');
-    perform t.login(t.id('outsider'));
-    perform t.expect_error(format('select public.raise_dispute(%L, ''x'')', e), '%NOT_A_MEMBER%', 'D-11#5');
-  end;
-
-  -- D-10 close
-  perform t.login(arif);
-  perform public.close_trip(trip);
-  perform t.assert_eq(public.is_trip_leader(trip, arif), false, 'D-10 acceptance: authority lapses on close');
-  perform t.expect_error(format('select public.leader_record_settlement(%L,%L,%L,1)', trip, sami, arif),
-    '%NOT_A_TRIP_LEADER%', 'D-10 acceptance / D-08#3: leader action refused after close');
-  perform t.expect_error(format('select public.void_expense(%L, ''x'')', e),
-    '%NOT_AUTHORIZED_TO_VOID%', 'D-07#3: closed trip → void proposal only');
-  perform t.expect_error(format($f$select public.add_expense(%L,%L,1000,'x',
-    jsonb_build_array(jsonb_build_object('user_id',%L,'share',1000)), %L)$f$, g, arif, sami, trip),
-    '%TRIP_CLOSED%', 'D-02#2: closed trip refuses expenses');
-  perform t.login(sami);
-  perform t.expect_error(format('select public.reopen_trip(%L)', trip), '%NOT_A_TRIP_LEADER%',
-                         'D-10#4: only a former leader may reopen');
-  perform t.login(arif);
-  perform public.reopen_trip(trip);
-  perform t.assert(public.is_trip_leader(trip, arif), 'D-10#4: reopened, authority restored');
-  perform t.assert(exists (select 1 from public.trip_leader_log where trip_id = trip and action = 'trip_reopened'),
-                   'D-10#4: reopening is logged');
-end $$;
-
 -- ── Feature 4.1 worked example, exact numbers ──────────────────────────────
 do $$
 declare g uuid; code text; a uuid := t.new_user('A'); b uuid := t.new_user('B'); c uuid := t.new_user('C');
-  d uuid := t.new_user('D'); e uuid := t.new_user('E'); tr uuid; s record; total bigint;
+  d uuid := t.new_user('D'); e uuid := t.new_user('E'); s record; total bigint;
 begin
   perform t.login(a);
   g := public.create_group('Feature 4.1');
@@ -518,15 +381,14 @@ begin
   perform t.login(d); perform public.join_group(code);
   perform t.login(e); perform public.join_group(code);
   perform t.login(a);
-  tr := public.create_trip(g, 'Day trip', array[b, c, d, e], array[b], 'open');
   perform public.add_expense(g, a, 10000, 'Auto rickshaw', jsonb_build_array(
     jsonb_build_object('user_id', a, 'share', 2000), jsonb_build_object('user_id', b, 'share', 2000),
     jsonb_build_object('user_id', c, 'share', 2000), jsonb_build_object('user_id', d, 'share', 2000),
-    jsonb_build_object('user_id', e, 'share', 2000)), tr);
+    jsonb_build_object('user_id', e, 'share', 2000)));
   perform t.login(b);
   perform public.add_expense(g, b, 10000, 'Second vehicle', jsonb_build_array(
     jsonb_build_object('user_id', a, 'share', 3334), jsonb_build_object('user_id', b, 'share', 3333),
-    jsonb_build_object('user_id', c, 'share', 3333)), tr);
+    jsonb_build_object('user_id', c, 'share', 3333)));
 
   perform t.assert_eq((select net_poisha from public.v_user_net where group_id = g and user_id = a), 4666::bigint, '4.1: A +4666');
   perform t.assert_eq((select net_poisha from public.v_user_net where group_id = g and user_id = b), 4667::bigint, '4.1: B +4667');
@@ -534,13 +396,11 @@ begin
   perform t.assert_eq((select net_poisha from public.v_user_net where group_id = g and user_id = d), -2000::bigint, '4.1: D −2000');
   perform t.assert_eq((select net_poisha from public.v_user_net where group_id = g and user_id = e), -2000::bigint, '4.1: E −2000');
   perform t.assert_eq(public.net_owed_raw(g, a, b), 1334::bigint, '4.1: A owes B ৳13.34, not ৳33.34');
-
-  -- trip_net_positions = group view here, and sums to zero (I7)
-  perform t.login(c);
-  select sum(net_poisha) as s into s from public.trip_net_positions(tr);
-  perform t.assert_eq(s.s, 0::numeric, 'I7: trip positions sum to zero');
+  perform t.assert_eq((select sum(net_poisha) from public.v_user_net where group_id = g), 0::numeric,
+                      'I7: group positions sum to zero');
 
   -- E-01 / I6 for every pair, and E-02 rounding attribution for A's 3334
+  perform t.login(c);
   for s in select u.id as other, u.nm from (values (a,'A'),(b,'B'),(c,'C'),(d,'D'),(e,'E')) u(id, nm) loop
     if s.other <> c then
       select coalesce((select running_poisha from public.explain_balance(g, s.other) order by occurred_at desc, entry_id desc limit 1), 0)
@@ -559,17 +419,18 @@ begin
                    'E-01: plain-language cause label');
 end $$;
 
--- E-03: leader attribution with role at write time, and void labelling
+-- B-03 / B-05#2 in the derivation: "added by" and cancellations with their reason
 do $$
 declare lbl text;
 begin
   perform t.login(t.id('sami'));
-  select string_agg(cause_label, ' | ') into lbl from public.explain_balance(t.id('g1'), t.id('arif'), t.id('trip1'));
-  perform t.assert(lbl like '%added by Tania (trip leader)%', 'E-03: "added by Tania (trip leader)"');
-  perform t.assert(lbl like '%Cancelled: Hotel — voided by Tania (trip leader) — wrong amount%', 'E-03 / B-05#2: void shown with actor and reason');
-  perform t.assert(lbl like '%Payment recorded by Tania (trip leader)%', 'D-08 / E-03: leader settlement labelled');
+  select string_agg(cause_label, ' | ') into lbl from public.explain_balance(t.id('g1'), t.id('tania'));
+  perform t.assert(lbl like '%Paid by Tania%added by Arif%', 'B-03: "added by Arif" when payer ≠ creator');
+  select string_agg(cause_label, ' | ') into lbl from public.explain_balance(t.id('g1'), t.id('arif'));
+  perform t.assert(lbl like '%Cancelled: Dinner typo — cancelled by agreement — typed 1200, was 1100%',
+                   'B-05#2: cancellation shown with its reason');
   perform t.assert_eq(
-    (select running_poisha from public.explain_balance(t.id('g1'), t.id('arif'), null) order by occurred_at desc, entry_id desc limit 1),
+    (select running_poisha from public.explain_balance(t.id('g1'), t.id('arif')) order by occurred_at desc, entry_id desc limit 1),
     public.net_owed_raw(t.id('g1'), t.id('arif'), t.id('sami')),
     'I6: full-group derivation matches net_owed');
 end $$;

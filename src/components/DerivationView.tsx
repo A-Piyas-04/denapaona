@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Flag, Star } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Badge } from './ui';
 import { Taka } from './Money';
 import { shortDate, cn } from '@/lib/format';
@@ -41,12 +41,10 @@ function Row({ row: r, groupId, otherName, last }: { row: DerivationRow; groupId
             {up ? '+' : '−'}<Taka poisha={Math.abs(r.signed_poisha)} />
           </span>
         </div>
-        {(d.split_kind === 'manual' || (d.split_kind === 'rounding' && d.got_extra_poisha) || d.entered_by_leader || d.leader_recorded || (d.open_disputes ?? 0) > 0) && (
+        {(d.split_kind === 'manual' || (d.split_kind === 'rounding' && d.got_extra_poisha)) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {d.split_kind === 'rounding' && d.got_extra_poisha && <Badge>+1 poisha rounding</Badge>}
             {d.split_kind === 'manual' && <Badge>Entered by hand</Badge>}
-            {(d.entered_by_leader || d.leader_recorded) && <Badge tone="amber"><Star size={11} className="fill-current" aria-hidden /> Leader action</Badge>}
-            {(d.open_disputes ?? 0) > 0 && <Badge tone="amber"><Flag size={11} aria-hidden /> Questioned</Badge>}
           </div>
         )}
         <div className="mt-2 flex items-center justify-between gap-2 text-[13px]">

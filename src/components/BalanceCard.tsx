@@ -14,8 +14,7 @@ export interface PairBalance {
   poisha: number;
 }
 
-const whyPath = (groupId: string, otherId: string, tripId?: string) =>
-  `/explain/${groupId}/${otherId}${tripId ? `?trip=${tripId}` : ''}`;
+const whyPath = (groupId: string, otherId: string) => `/explain/${groupId}/${otherId}`;
 
 function WhyLink({ to, className }: { to: string; className?: string }) {
   const t = useT();
@@ -30,20 +29,20 @@ function WhyLink({ to, className }: { to: string; className?: string }) {
  * Story B-04: the headline figure.  It is the sum of the same integers shown in
  * the breakdown, so the two can never disagree by even a poisha (B-04#3).
  */
-export function BalanceHero({ groupId, tripId, pairs, loading, onShowBreakdown, scopeLabel }: {
-  groupId: string; tripId?: string; pairs: PairBalance[] | undefined; loading?: boolean;
-  onShowBreakdown?: () => void; scopeLabel?: string;
+export function BalanceHero({ groupId, pairs, loading, onShowBreakdown }: {
+  groupId: string; pairs: PairBalance[] | undefined; loading?: boolean;
+  onShowBreakdown?: () => void;
 }) {
   const t = useT();
   if (loading || !pairs) return <HeroSkeleton />;
   const net = sum(pairs.map((p) => p.poisha));
   const owing = pairs.filter((p) => p.poisha !== 0);
-  const label = net > 0 ? t('balance.youreOwed') : net < 0 ? t('balance.youOwe') : (scopeLabel ?? 'Your balance');
+  const label = net > 0 ? t('balance.youreOwed') : net < 0 ? t('balance.youOwe') : 'Your balance';
   const sub = owing.length === 0 ? 'Nobody owes anybody here.'
     : owing.length === 1 ? (owing[0]!.poisha > 0 ? `${owing[0]!.name} owes you` : `You owe ${owing[0]!.name}`)
     : `Across ${owing.length} people`;
   const action = owing.length === 1
-    ? <WhyLink to={whyPath(groupId, owing[0]!.otherId, tripId)} />
+    ? <WhyLink to={whyPath(groupId, owing[0]!.otherId)} />
     : owing.length > 1 && onShowBreakdown
       ? <button type="button" onClick={onShowBreakdown} className="inline-flex h-8 items-center rounded-full bg-slate-100 px-3 text-[13px] font-semibold text-slate-700 hover:bg-brand-soft hover:text-brand-ink">See breakdown</button>
       : undefined;
@@ -56,8 +55,8 @@ export function BalanceHero({ groupId, tripId, pairs, loading, onShowBreakdown, 
 }
 
 /** Per-person rows, grouped into "You owe" and "You're owed", each with its "Why?" (§13.3). */
-export function BalanceBreakdown({ groupId, tripId, pairs, loading }: {
-  groupId: string; tripId?: string; pairs: PairBalance[] | undefined; loading?: boolean;
+export function BalanceBreakdown({ groupId, pairs, loading }: {
+  groupId: string; pairs: PairBalance[] | undefined; loading?: boolean;
 }) {
   const t = useT();
   if (loading || !pairs) return <ListSkeleton rows={2} />;
@@ -81,7 +80,7 @@ export function BalanceBreakdown({ groupId, tripId, pairs, loading }: {
                          trailing={
                            <span className="flex items-center gap-2.5">
                              <Taka poisha={Math.abs(p.poisha)} className={cn('text-[16px] font-semibold', p.poisha < 0 ? 'text-owe' : 'text-owed')} />
-                             <WhyLink to={whyPath(groupId, p.otherId, tripId)} />
+                             <WhyLink to={whyPath(groupId, p.otherId)} />
                            </span>
                          } />
               ))}

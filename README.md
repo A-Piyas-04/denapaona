@@ -14,10 +14,10 @@ The hard rules, in brief: `ledger_entries` is append-only; balances are always d
 supabase/
   migrations/                 the whole schema, RLS and RPC layer (Phase 0: everything lands at once)
     …0100_schema.sql          tables, append-only trigger
-    …0200_views_and_helpers   v_user_net, v_trip_net, v_pairwise_net, net_owed, is_trip_leader
+    …0200_views_and_helpers   v_user_net, v_pairwise_net, net_owed
     …0300_rpc_core.sql        groups, add_expense, propose_*, cancel, expiry
     …0400_rpc_respond.sql     respond_to_proposal: lock → re-validate live → commit
-    …0500_rpc_trips.sql       trips, leaders, voids, disputes, explain_balance
+    …0500_rpc_voids_and_explain  propose_void, explain_balance
     …0600_rls.sql             default-deny, read-only grants, RPC execute list
     …0700_realtime_and_cron   Realtime publication, hourly expiry sweep
   tests/                      SQL suites, fuzz harness, concurrency races, e2e
@@ -39,14 +39,14 @@ npm run dev
 
 **Never put the service role key in any `VITE_` variable** (§12.2). The anon key is public by design.
 
-To try the app without a Supabase project, run `npm run demo` (Docker required), or `npm run dev:local` (no Docker; uses a locally installed PostgreSQL). Both load a full set of demo groups, trips and requests. See [`DEMO.md`](DEMO.md) for the demo users and what each is good for.
+To try the app without a Supabase project, run `npm run demo` (Docker required), or `npm run dev:local` (no Docker; uses a locally installed PostgreSQL). Both load a full set of demo groups, expenses and requests. See [`DEMO.md`](DEMO.md) for the demo users and what each is good for.
 
 ## Tests
 
 | Command | What it runs | Needs |
 |---|---|---|
 | `npm test` | Vitest for `money.ts` and `settle.ts` | — |
-| `npm run test:sql` | Migrations on PostgreSQL 16, the §12.7 checklist in SQL, the story behaviour suite, a fuzz run checking I1–I10 after every operation, and the §14.2 concurrency races | Docker |
+| `npm run test:sql` | Migrations on PostgreSQL 16, the §12.7 checklist in SQL, the story behaviour suite, a fuzz run checking the ledger invariants after every operation, and the §14.2 concurrency races | Docker |
 | `npm run test:e2e` | Real PostgREST: the §12.7 checklist over HTTP, then a three-user browser run of the core flows | Docker; Playwright Chromium (`npx playwright-core install chromium`, or set `CHROME_PATH`) |
 
 Knobs: `FUZZ_OPS=5000` (default 3000), `ROUNDS=10` for the concurrency races (default 5), `KEEP=1` to keep the database container running afterwards.

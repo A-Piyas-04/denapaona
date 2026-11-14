@@ -49,11 +49,11 @@ err() { grep -oE '[A-Z_]{6,}' "$TMP/$1.err" | head -1 || true; }
 for round in $(seq 1 "$ROUNDS"); do
   W="$(q "select t.race_world('r$round')")"
   j() { echo "$W" | jq -r ".$1"; }
-  G=$(j g); ARIF=$(j arif); SAMI=$(j sami); RAFI=$(j rafi); TANIA=$(j tania); NADIA=$(j nadia); TRIP=$(j trip); E=$(j e)
+  G=$(j g); ARIF=$(j arif); SAMI=$(j sami); RAFI=$(j rafi); E=$(j e)
   as() { q "select t.login('$1') ; $2" | tail -1; }
 
   # 1. Two proposals spending the same debt reach final approval at once.
-  # Sami owes Arif 3000 + 3333 (trip) = 6333 in total; settling all of it and
+  # Sami owes Arif 3000 + 3333 = 6333 in total; settling all of it and
   # transferring 2000 of it cannot both fit.
   P1=$(as "$SAMI" "select public.propose_settlement('$G','$SAMI','$ARIF',6333)")
   P2=$(as "$ARIF" "select public.propose_transfer('$G','$SAMI','$ARIF','$RAFI',2000)")
@@ -89,84 +89,16 @@ for round in $(seq 1 "$ROUNDS"); do
   case "$ST:$N" in cancelled:0|approved:1) ;; *) fail "C-05#3: $ST with $N entries";; esac
   echo "   ok  round $round · C-05#3 cancel vs approve → $ST"
 
-  # 5. Two leaders void the same expense simultaneously.
-  race "$ARIF"  "select public.void_expense('$E', 'dup A')" \
-       "$TANIA" "select public.void_expense('$E', 'dup B')"
+  # 5. Two people in the split propose cancelling the same expense at once.
+  race "$ARIF" "select public.propose_void('$E', 'dup A')" \
+       "$SAMI" "select public.propose_void('$E', 'dup B')"
   ERRS="$(err a)$(err b)"
-  [ "$ERRS" = ALREADY_VOIDED ] || fail "5: expected exactly one ALREADY_VOIDED, got '$ERRS'"
-  [ "$(q "select count(*) from public.ledger_entries where source_id = '$E'")" = 4 ] || fail "5: reversal count"
-  echo "   ok  round $round · 5 double leader void → one ALREADY_VOIDED, one set of reversals"
-
-  # 6. A leader settles while another voids the underlying expense.
-  W3="$(q "select t.race_world('r${round}c')")"
-  G3=$(echo "$W3" | jq -r .g); A3=$(echo "$W3" | jq -r .arif); S3=$(echo "$W3" | jq -r .sami)
-  T3=$(echo "$W3" | jq -r .tania); TR3=$(echo "$W3" | jq -r .trip); E3=$(echo "$W3" | jq -r .e)
-  race "$T3" "select public.leader_record_settlement('$TR3','$S3','$A3',3333)" \
-       "$A3" "select public.void_expense('$E3', 'wrong')"
-  SETTLE_ERR="$(err a)"
-  if [ -z "$SETTLE_ERR" ]; then
-    # Settlement succeeded, so it must have been serialised BEFORE the void:
-    # after a void the trip balance is 0 and the settlement would be refused.
-    [ -z "$(err b)" ] || fail "6: void unexpectedly failed: $(err b)"
-    before "$(ts a)" "$(ts b)" || fail "6: settlement recorded against an already-voided balance"
-    # Sami paid for a ride that was then cancelled: Arif now owes Sami 3333.
-    [ "$(q "select public.trip_net_owed_raw('$TR3', '$A3', '$S3')")" = 3333 ] || fail "6: final trip balance"
-    echo "   ok  round $round · 6 settle vs void → settlement first, then void"
-  else
-    [ "$SETTLE_ERR" = EXCEEDS_TRIP_BALANCE ] || fail "6: unexpected $SETTLE_ERR"
-    echo "   ok  round $round · 6 settle vs void → void first, settlement refused (EXCEEDS_TRIP_BALANCE)"
-  fi
-
-  # 7. Last-leader removals race: Arif and Tania remove each other with Nadia
-  #    already gone — never leaderless.
-  as "$A3" "select public.remove_trip_leader('$TR3', '$(echo "$W3" | jq -r .nadia)')" >/dev/null
-  race "$A3" "select public.remove_trip_leader('$TR3', '$T3')" \
-       "$T3" "select public.remove_trip_leader('$TR3', '$A3')"
-  [ "$(q "select count(*) from public.trip_leaders where trip_id = '$TR3'")" = 1 ] || fail "7: leader count"
-  # The loser was just demoted by the winner, so the authority re-check under
-  # the lock refuses it before the last-leader count is even reached.
-  ERRS="$(err a)$(err b)"
-  case "$ERRS" in NOT_A_TRIP_LEADER|CANNOT_REMOVE_LAST_LEADER) ;; *) fail "7: got '$ERRS'";; esac
-  echo "   ok  round $round · 7 mutual last-leader removal → one leader remains ($ERRS)"
-
-  # 7a. Both remaining leaders step down at once: §14.2 verbatim.
-  W6="$(q "select t.race_world('r${round}f')")"
-  A6=$(echo "$W6" | jq -r .arif); T6=$(echo "$W6" | jq -r .tania); N6=$(echo "$W6" | jq -r .nadia); TR6=$(echo "$W6" | jq -r .trip)
-  as "$A6" "select public.remove_trip_leader('$TR6', '$N6')" >/dev/null
-  race "$A6" "select public.remove_trip_leader('$TR6', '$A6')" \
-       "$T6" "select public.remove_trip_leader('$TR6', '$T6')"
-  [ "$(q "select count(*) from public.trip_leaders where trip_id = '$TR6'")" = 1 ] || fail "7a: leader count"
-  [ "$(err a)$(err b)" = CANNOT_REMOVE_LAST_LEADER ] || fail "7a: got '$(err a)$(err b)'"
-  echo "   ok  round $round · 7a simultaneous step-down → one succeeds, one CANNOT_REMOVE_LAST_LEADER"
-
-  # 7b. TOCTOU: Arif demotes Tania while Tania demotes Nadia (3 leaders).
-  #     If Arif lands first, Tania's removal must be refused.
-  T4=$(q "select t.race_world('r${round}d')")
-  G4=$(echo "$T4" | jq -r .g); A4=$(echo "$T4" | jq -r .arif); TA4=$(echo "$T4" | jq -r .tania)
-  N4=$(echo "$T4" | jq -r .nadia); TR4=$(echo "$T4" | jq -r .trip)
-  race "$A4"  "select public.remove_trip_leader('$TR4', '$TA4')" \
-       "$TA4" "select public.remove_trip_leader('$TR4', '$N4')"
-  BAD=$(q "select count(*) from public.trip_leader_log a, public.trip_leader_log b
-           where a.trip_id = '$TR4' and b.trip_id = '$TR4'
-             and a.action = 'removed' and a.user_id = '$TA4'
-             and b.action = 'removed' and b.actor_id = '$TA4' and b.created_at > a.created_at")
-  [ "$BAD" = 0 ] || fail "7b: a demoted leader removed someone after losing authority"
-  echo "   ok  round $round · 7b demoted leader cannot act after demotion ($(err b || true))"
-
-  # 8. The trip closes while a leader action is in flight.
-  W5="$(q "select t.race_world('r${round}e')")"
-  A5=$(echo "$W5" | jq -r .arif); S5=$(echo "$W5" | jq -r .sami); T5=$(echo "$W5" | jq -r .tania); TR5=$(echo "$W5" | jq -r .trip)
-  race "$T5" "select public.leader_record_settlement('$TR5','$S5','$A5',1000)" \
-       "$S5" "select public.close_trip('$TR5')"
-  if [ -z "$(err a)" ]; then
-    before "$(ts a)" "$(ts b)" || fail "8: leader write landed after close"
-    echo "   ok  round $round · 8 close vs leader settle → settlement completed before close"
-  else
-    [ "$(err a)" = NOT_A_TRIP_LEADER ] || fail "8: unexpected $(err a)"
-    echo "   ok  round $round · 8 close vs leader settle → closed first, settlement refused"
-  fi
+  [ "$ERRS" = VOID_ALREADY_PROPOSED ] || fail "5: expected exactly one VOID_ALREADY_PROPOSED, got '$ERRS'"
+  [ "$(q "select count(*) from public.proposals where type = 'void' and status = 'pending' and payload->>'expense_id' = '$E'")" = 1 ] \
+    || fail "5: pending void count"
+  echo "   ok  round $round · 5 double propose_void → one VOID_ALREADY_PROPOSED, one pending request"
 done
 
 # Invariants across everything the races produced.
 q "select t.check_invariants(id) from public.groups where name like 'Race %'" >/dev/null
-echo "   ok  invariants I1–I10 hold after all races"
+echo "   ok  invariants hold after all races"

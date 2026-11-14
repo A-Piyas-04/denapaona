@@ -5,7 +5,7 @@ import { Loadable } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useMembers } from '@/hooks/useGroups';
 
-/** Stories B-01, B-02, B-03 — a group expense outside any trip. */
+/** Stories B-01, B-02, B-03 — a group expense. */
 export function AddExpense() {
   const { id: groupId = '' } = useParams();
   const me = useMe();

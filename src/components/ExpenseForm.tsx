@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Users, Wallet } from 'lucide-react';
 import { Avatar, Button, Field, IconTile, Input, ListGroup, ListRow, Segmented, Sheet, StickyFooter } from './ui';
 import { ParticipantPicker, type Person } from './ParticipantPicker';
-import { Taka } from './Money';
 import { useToast } from './Toast';
 import { useDraft } from '@/hooks/useBrowser';
 import { rpc, newClientToken } from '@/lib/rpc';
-import { supabase } from '@/lib/supabase';
-import { errorMessage, toAppError } from '@/lib/errors';
+import { toAppError } from '@/lib/errors';
 import {
   formatTaka, isPartialTakaInput, parseTakaToPoisha, poishaToInput, remainderRecipients, SANITY_BOUND_POISHA,
   splitEvenly, splitRemainder, sum,
 } from '@/lib/money';
 import { timeAgo, cn } from '@/lib/format';
-import type { Expense, TripPreset } from '@/lib/types';
 
 interface Draft {
   amount: string;
@@ -30,18 +27,13 @@ interface Draft {
 export interface ExpenseFormProps {
   groupId: string;
   me: string;
-  roster: Person[];        // default participants (trip roster, or all members)
+  roster: Person[];        // default participants
   others: Person[];        // other group members, addable on demand
-  tripId?: string;
-  presets?: TripPreset[];
-  recentSets?: string[][];
-  runningTotal?: number;   // Feature 4.4: trip total visible while entering
-  prefill?: Expense | null;
   onSaved: (expenseId: string) => void;
 }
 
 /**
- * Add-expense form, equal or itemised (stories B-01, B-02, B-03, D-02, D-03).
+ * Add-expense form, equal or itemised (stories B-01, B-02, B-03).
  *
  * Built for the 10-second target (Feature 4.4): keypad focused on open, payer
  * defaults to you, participants default to the whole roster, one tap to save.
@@ -49,7 +41,7 @@ export interface ExpenseFormProps {
  * is a convenience only (B-02#5).
  */
 export function ExpenseForm(props: ExpenseFormProps) {
-  const { groupId, me, roster, others, tripId, presets = [], recentSets = [], runningTotal, prefill, onSaved } = props;
+  const { groupId, me, roster, others, onSaved } = props;
   const qc = useQueryClient();
   const toast = useToast();
   const amountRef = useRef<HTMLInputElement>(null);
@@ -58,31 +50,12 @@ export function ExpenseForm(props: ExpenseFormProps) {
     amount: '', description: '', payerId: me, participants: roster.map((p) => p.id),
     mode: 'equal', custom: {}, clientToken: newClientToken(),
   };
-  const [draft, setDraft, clearDraft] = useDraft<Draft>(`hn.draft.expense.${groupId}.${tripId ?? 'group'}`, initial);
+  const [draft, setDraft, clearDraft] = useDraft<Draft>(`hn.draft.expense.${groupId}.group`, initial);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
-
-  // "Void and re-enter" (D-07): start from the voided expense's values.
-  useEffect(() => {
-    if (!prefill) return;
-    const shares = prefill.expense_shares ?? [];
-    const positive = shares.filter((s) => s.share_poisha > 0);
-    const even = splitEvenly(prefill.total_poisha, positive.map((s) => s.user_id));
-    const isEven = positive.every((s) => even.get(s.user_id) === s.share_poisha);
-    setDraft({
-      amount: poishaToInput(prefill.total_poisha),
-      description: prefill.description,
-      payerId: prefill.payer_id,
-      participants: positive.map((s) => s.user_id),
-      mode: isEven ? 'equal' : 'unequal',
-      custom: Object.fromEntries(positive.map((s) => [s.user_id, poishaToInput(s.share_poisha)])),
-      clientToken: newClientToken(),
-    });
-  }, [prefill, setDraft]);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<null | { kind: 'large' } | { kind: 'duplicate'; text: string }>(null);
-  const [offerPreset, setOfferPreset] = useState<string[] | null>(null);
   const [sheet, setSheet] = useState<null | 'payer' | 'split'>(null);
 
   const people = useMemo(() => [...roster, ...others], [roster, others]);
@@ -129,18 +102,13 @@ export function ExpenseForm(props: ExpenseFormProps) {
         }
       }
       const id = await rpc.addExpense({
-        groupId, payerId: draft.payerId, total, description: draft.description.trim(), tripId,
+        groupId, payerId: draft.payerId, total, description: draft.description.trim(),
         shares: [...shares].map(([user_id, share]) => ({ user_id, share })),
         clientToken: draft.clientToken,
       });
       toast(`Expense saved: ${formatTaka(total)}`);
       clearDraft();
-      void qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(groupId) || q.queryKey[0] === 'groups' || q.queryKey[0] === 'tripNets' });
-      if (tripId && maybeOfferPreset(tripId, draft.participants, roster.length, presets)) {
-        setOfferPreset(draft.participants);
-        pendingSaved.current = id;
-        return;
-      }
+      void qc.invalidateQueries({ predicate: (q) => q.queryKey.includes(groupId) || q.queryKey[0] === 'groups' });
       onSaved(id);
     } catch (e) {
       const err = toAppError(e);
@@ -151,7 +119,6 @@ export function ExpenseForm(props: ExpenseFormProps) {
       setBusy(false);
     }
   }
-  const pendingSaved = useRef<string | null>(null);
 
   const everyone = roster.length > 0 && roster.every((p) => draft.participants.includes(p.id)) && draft.participants.length === roster.length;
   const splitWho = draft.participants.length === 0 ? 'Nobody yet'
@@ -168,13 +135,6 @@ export function ExpenseForm(props: ExpenseFormProps) {
 
   return (
     <form className="flex flex-1 flex-col gap-6" onSubmit={(e) => { e.preventDefault(); void save(); }}>
-      {runningTotal !== undefined && (
-        <p className="-mb-2 text-center text-[14px] text-slate-500">
-          Trip so far <Taka poisha={runningTotal} className="font-semibold text-slate-800" />
-          {total ? <> then <Taka poisha={runningTotal + total} className="font-semibold text-slate-800" /></> : null}
-        </p>
-      )}
-
       <div className="rounded-3xl border border-slate-200/80 bg-white px-5 pb-5 pt-6">
         <Field label="Amount (৳)" htmlFor="amount" srLabel
                error={draft.amount !== '' && total === null ? 'Enter a valid amount.' : undefined}
@@ -241,8 +201,6 @@ export function ExpenseForm(props: ExpenseFormProps) {
           <ParticipantPicker
             roster={roster} others={others} selected={draft.participants}
             onChange={(ids) => set({ participants: ids })}
-            presets={presets.map((p) => ({ id: p.id, label: p.label, userIds: p.user_ids }))}
-            recent={recentSets}
           />
           <Segmented label="How to split" value={draft.mode} onChange={(mode) => set({ mode })}
                      options={[{ value: 'equal', label: 'Equally' }, { value: 'unequal', label: 'Unequally' }]} />
@@ -312,61 +270,6 @@ export function ExpenseForm(props: ExpenseFormProps) {
             : confirm?.kind === 'duplicate' ? confirm.text : ''}
         </p>
       </Sheet>
-
-      <SavePresetSheet
-        ids={offerPreset} tripId={tripId} nameOf={nameOf}
-        onDone={() => { setOfferPreset(null); if (pendingSaved.current) onSaved(pendingSaved.current); }}
-      />
     </form>
-  );
-}
-
-/**
- * D-03#3: after the same subset is used twice on a trip, offer to save it.
- * Usage counts are a per-device convenience kept in local storage.
- */
-function maybeOfferPreset(tripId: string, ids: string[], rosterSize: number, presets: TripPreset[]): boolean {
-  if (ids.length < 2 || ids.length >= rosterSize) return false;
-  const key = [...ids].sort().join(',');
-  if (presets.some((p) => [...p.user_ids].sort().join(',') === key)) return false;
-  try {
-    const store = JSON.parse(localStorage.getItem(`hn.subsets.${tripId}`) ?? '{}') as Record<string, number>;
-    store[key] = (store[key] ?? 0) + 1;
-    localStorage.setItem(`hn.subsets.${tripId}`, JSON.stringify(store));
-    return store[key] === 2;
-  } catch {
-    return false;
-  }
-}
-
-function SavePresetSheet({ ids, tripId, nameOf, onDone }: {
-  ids: string[] | null; tripId?: string; nameOf: (id: string) => string; onDone: () => void;
-}) {
-  const [label, setLabel] = useState('');
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
-  const qc = useQueryClient();
-  if (!ids || !tripId) return null;
-  return (
-    <Sheet open onClose={onDone} title="Save this group of people?"
-           footer={
-             <div className="grid grid-cols-2 gap-2">
-               <Button variant="secondary" onClick={onDone}>Not now</Button>
-               <Button busy={busy} disabled={!label.trim()} onClick={async () => {
-                 setBusy(true);
-                 // Presets carry no financial effect, so RLS permits a direct insert (§12.4).
-                 const { error } = await supabase.from('trip_presets').insert({ trip_id: tripId, label: label.trim(), user_ids: ids });
-                 setBusy(false);
-                 if (error) toast(errorMessage(error), 'error');
-                 else { toast('Preset saved'); void qc.invalidateQueries({ queryKey: ['trip', tripId] }); }
-                 onDone();
-               }}>Save</Button>
-             </div>
-           }>
-      <p className="mb-3 text-[15px] text-slate-600">You’ve split with {ids.map(nameOf).join(', ')} twice.</p>
-      <Field label="Name" htmlFor="preset-label">
-        <Input id="preset-label" placeholder="e.g. Fort group" maxLength={40} value={label} onChange={(e) => setLabel(e.target.value)} />
-      </Field>
-    </Sheet>
   );
 }

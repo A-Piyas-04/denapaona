@@ -15,7 +15,7 @@ export function useRealtimeGroup(groupId: string | undefined) {
       qc.invalidateQueries({
         predicate: (q) =>
           q.queryKey.includes(groupId) ||
-          ['inbox', 'sent', 'groups', 'proposal', 'trip', 'tripNets', 'explain', 'expense'].includes(String(q.queryKey[0])),
+          ['inbox', 'sent', 'groups', 'proposal', 'explain', 'expense'].includes(String(q.queryKey[0])),
       });
     const ch = supabase.channel(`group:${groupId}`);
     for (const table of ['proposals', 'ledger_entries', 'expenses']) {

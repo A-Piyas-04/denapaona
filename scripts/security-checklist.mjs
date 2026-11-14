@@ -12,7 +12,7 @@
  *   node scripts/security-checklist.mjs
  *
  * A is the attacker.  B and C build a foreign group A must not reach, plus a
- * shared group with debts and trips for A to attack from the inside.  The
+ * shared group with debts for A to attack from the inside.  The
  * fixtures it creates are ordinary groups named "§12.7 …" and cannot be
  * deleted (the ledger is append-only); use throwaway accounts.
  */
@@ -46,17 +46,14 @@ const gF = await must(B.rpc('create_group', { p_name: `§12.7 foreign ${tag}` })
 const codeF = (await must(B.from('groups').select('invite_code').eq('id', gF).single(), 'code')).invite_code;
 await must(C.rpc('join_group', { p_invite_code: codeF }), 'C joins foreign');
 await must(B.rpc('add_expense', { p_group_id: gF, p_payer_id: b, p_total: 5000, p_description: 'foreign', p_shares: [share(c, 5000)] }), 'foreign expense');
-const tripF = await must(B.rpc('create_trip', { p_group_id: gF, p_name: 'foreign trip', p_member_ids: [c] }), 'foreign trip');
 
 const gA = await must(A.rpc('create_group', { p_name: `§12.7 shared ${tag}` }), 'shared group');
 const codeA = (await must(A.from('groups').select('invite_code').eq('id', gA).single(), 'code')).invite_code;
 await must(B.rpc('join_group', { p_invite_code: codeA }), 'B joins');
 await must(C.rpc('join_group', { p_invite_code: codeA }), 'C joins');
-const ownExpense = await must(A.rpc('add_expense', { p_group_id: gA, p_payer_id: a, p_total: 3000, p_description: 'mine', p_shares: [share(b, 3000)] }), 'A expense');
+await must(A.rpc('add_expense', { p_group_id: gA, p_payer_id: a, p_total: 3000, p_description: 'mine', p_shares: [share(b, 3000)] }), 'A expense');
 const othersExpense = await must(B.rpc('add_expense', { p_group_id: gA, p_payer_id: b, p_total: 2000, p_description: 'not mine', p_shares: [share(c, 2000)] }), 'B expense');
 const foreignProposal = await must(C.rpc('propose_settlement', { p_group_id: gA, p_debtor: c, p_creditor: b, p_amount: 1000 }), 'B/C proposal');
-const tripLed = await must(A.rpc('create_trip', { p_group_id: gA, p_name: 'A leads', p_member_ids: [b] }), 'A trip');
-const tripNotLed = await must(B.rpc('create_trip', { p_group_id: gA, p_name: 'B leads', p_member_ids: [a, c] }), 'B trip');
 const anyEntry = (await must(A.from('ledger_entries').select('id').eq('group_id', gA).limit(1).single(), 'entry')).id;
 
 // ── attacks, all as A ───────────────────────────────────────────────────────
@@ -86,23 +83,10 @@ await attack('4c', "read another group's expenses", A.from('expenses').select('*
 await attack('4d', 'net_owed on a foreign group', A.rpc('net_owed', { p_group: gF, p_debtor: c, p_creditor: b }), refused(/NOT_A_MEMBER/));
 await attack(5, "approve on someone else's behalf", A.rpc('respond_to_proposal', { p_proposal_id: foreignProposal, p_approve: true }), refused(/NOT_A_PENDING_PARTICIPANT/));
 await attack(6, 'add_expense in a foreign group', A.rpc('add_expense', {
-  p_group_id: gF, p_payer_id: b, p_total: 100, p_description: 'x', p_shares: [], p_trip_id: null,
+  p_group_id: gF, p_payer_id: b, p_total: 100, p_description: 'x', p_shares: [],
 }), refused(/NOT_A_MEMBER/));
-await attack(7, 'explain_balance in a foreign group', A.rpc('explain_balance', { p_group_id: gF, p_other: b, p_trip_id: null }), refused(/NOT_A_MEMBER/));
-await attack(8, "tag an expense onto another group's trip", A.rpc('add_expense', {
-  p_group_id: gA, p_payer_id: a, p_total: 100, p_description: 'x', p_shares: [share(b, 100)], p_trip_id: tripF,
-}), refused(/TRIP_NOT_IN_GROUP/));
-await attack(9, 'make yourself a trip leader', A.from('trip_leaders').insert({ trip_id: tripNotLed, user_id: a, appointed_by: a }),
-  refused(/row-level security|permission denied/));
-await attack('9b', 'add_trip_leader as a non-leader', A.rpc('add_trip_leader', { p_trip_id: tripNotLed, p_user: a }), refused(/NOT_A_TRIP_LEADER/));
-await attack(10, 'leader settlement on a trip you do not lead', A.rpc('leader_record_settlement', {
-  p_trip_id: tripNotLed, p_debtor: c, p_creditor: b, p_amount: 100, p_note: null,
-}), refused(/NOT_A_TRIP_LEADER/));
-await attack(11, 'void your own expense outside a trip', A.rpc('void_expense', { p_expense_id: ownExpense, p_reason: 'test' }), refused(/NOT_AUTHORIZED_TO_VOID/));
+await attack(7, 'explain_balance in a foreign group', A.rpc('explain_balance', { p_group_id: gF, p_other: b }), refused(/NOT_A_MEMBER/));
 await attack('11b', 'propose a void you are not part of', A.rpc('propose_void', { p_expense_id: othersExpense, p_reason: 'test' }), refused(/NOT_INVOLVED_IN_EXPENSE/));
-await attack(12, 'as a leader, settle more than the trip created', A.rpc('leader_record_settlement', {
-  p_trip_id: tripLed, p_debtor: b, p_creditor: a, p_amount: 99999999, p_note: null,
-}), refused(/EXCEEDS_TRIP_BALANCE/));
 
 const failed = results.filter((x) => !x).length;
 console.log(failed ? `\n${failed} ATTACK(S) SUCCEEDED — DO NOT DEPLOY.` : `\nAll ${results.length} attacks refused.`);

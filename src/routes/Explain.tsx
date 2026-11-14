@@ -1,32 +1,28 @@
 import { useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ListOrdered, Map as MapIcon } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AlertTriangle, ListOrdered } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { DerivationView } from '@/components/DerivationView';
-import { Banner, Button, Field, Input, Section, Segmented, Sheet, StatHero, Textarea } from '@/components/ui';
+import { Button, Field, Input, Section, Segmented, Sheet, StatHero, Textarea } from '@/components/ui';
 import { EmptyState, ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
 import { useExplain } from '@/hooks/useExplain';
-import { useTrip } from '@/hooks/useTrips';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
 import { formatTaka, isPartialTakaInput, parseTakaToPoisha } from '@/lib/money';
 
 /**
- * "Why do I owe this?" — stories E-01, E-02, E-03, E-04, plus the actions that
- * follow naturally from reading a balance: settle all (F-05) and propose a
+ * "Why do I owe this?" — stories E-01, E-02, plus the actions that follow
+ * naturally from reading a balance: settle all (F-05) and propose a
  * correction (C-07).
  */
 export function Explain() {
   const { groupId = '', otherId = '' } = useParams();
-  const [params] = useSearchParams();
-  const tripId = params.get('trip');
   const me = useMe();
   const { name } = useNames(groupId);
-  const trip = useTrip(tripId ?? '');
-  const explain = useExplain(groupId, otherId, tripId);
+  const explain = useExplain(groupId, otherId);
   const other = name(otherId);
   const navigate = useNavigate();
   const toast = useToast();
@@ -49,12 +45,6 @@ export function Explain() {
 
   return (
     <AppShell title={`You and ${other}`} back>
-      {tripId && (
-        <Banner icon={MapIcon} to={`/explain/${groupId}/${otherId}`} action={<span className="text-[14px] font-semibold">See all</span>}>
-          Showing {trip.data?.trip.name ?? 'one trip'} only
-        </Banner>
-      )}
-
       {explain.isLoading ? <><HeroSkeleton /><ListSkeleton rows={4} /></> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
         <>
           {!explain.data.consistent && (
@@ -70,7 +60,7 @@ export function Explain() {
             tone={final > 0 ? 'owed' : final < 0 ? 'owe' : 'neutral'}
             value={final === 0 ? <span className="text-slate-400">Square</span>
               : <span className={final > 0 ? 'text-owed' : 'text-owe'}>{formatTaka(Math.abs(final))}</span>}
-            sub={!tripId ? (
+            sub={
               <div className="mt-1 flex flex-wrap gap-2">
                 {final !== 0 && (
                   <Button size="sm" busy={busy} onClick={settleAll}>
@@ -79,12 +69,12 @@ export function Explain() {
                 )}
                 <Button size="sm" variant="secondary" onClick={() => setCorrecting(true)}>Propose a correction</Button>
               </div>
-            ) : undefined}
+            }
           />
           <Section title="How we got here">
             <p className="-mt-1 mb-3 px-1 text-[13px] text-slate-500">Every step that produced this figure, oldest first.</p>
             {explain.data.rows.length === 0 ? (
-              <EmptyState icon={ListOrdered} title={tripId ? 'Nothing on this trip between you two' : 'Nothing between you two yet'} />
+              <EmptyState icon={ListOrdered} title="Nothing between you two yet" />
             ) : (
               <DerivationView rows={explain.data.rows} groupId={groupId} otherName={other} />
             )}

@@ -14,12 +14,10 @@ import { cn } from '@/lib/format';
 
 /**
  * Feature 3 / story F-01.  Suggestions, not state: tapping one opens a
- * settlement proposal the other side must confirm (F-02) — or, inside an
- * active trip, a leader records it directly (D-08).
+ * settlement proposal the other side must confirm (F-02).
  */
-export function SettleSuggestions({ groupId, me, nets, name, tripId, leaderMode }: {
+export function SettleSuggestions({ groupId, me, nets, name }: {
   groupId: string; me: string; nets: Map<string, number>; name: (id: string) => string;
-  tripId?: string; leaderMode?: boolean;
 }) {
   const payments = settle(nets);
   const navigate = useNavigate();
@@ -36,15 +34,9 @@ export function SettleSuggestions({ groupId, me, nets, name, tripId, leaderMode 
   async function act(p: Payment) {
     setBusy(true);
     try {
-      if (leaderMode && tripId) {
-        await rpc.leaderRecordSettlement({ tripId, debtor: p.from, creditor: p.to, amount: p.amountPoisha });
-        toast(`Payment recorded: ${name(p.from)} paid ${name(p.to)}`);
-        void qc.invalidateQueries();
-      } else {
-        const id = await rpc.proposeSettlement({ groupId, debtor: p.from, creditor: p.to, amount: p.amountPoisha, tripId: tripId ?? null });
-        toast(p.from === me ? `Sent. ${name(p.to)} confirms they got it.` : `Sent. ${name(p.from)} confirms they paid.`);
-        navigate(`/proposals/${id}`);
-      }
+      const id = await rpc.proposeSettlement({ groupId, debtor: p.from, creditor: p.to, amount: p.amountPoisha });
+      toast(p.from === me ? `Sent. ${name(p.to)} confirms they got it.` : `Sent. ${name(p.from)} confirms they paid.`);
+      navigate(`/proposals/${id}`);
       setOpen(null);
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -59,10 +51,9 @@ export function SettleSuggestions({ groupId, me, nets, name, tripId, leaderMode 
       <ListGroup>
         {sorted.map((p) => {
           const involved = p.from === me || p.to === me;
-          const actionable = involved || leaderMode;
           return (
             <ListRow key={`${p.from}>${p.to}`}
-                     onClick={actionable ? () => setOpen(p) : undefined}
+                     onClick={involved ? () => setOpen(p) : undefined}
                      className={cn(involved && 'bg-brand-soft/30')}
                      leading={
                        <span className="flex shrink-0 -space-x-2">
@@ -71,21 +62,21 @@ export function SettleSuggestions({ groupId, me, nets, name, tripId, leaderMode 
                        </span>
                      }
                      title={`${who(p.from)} ${p.from === me ? 'pay' : 'pays'} ${who(p.to, false)}`}
-                     subtitle={actionable ? (leaderMode ? 'Tap to record' : 'Tap to mark as paid') : undefined}
+                     subtitle={involved ? 'Tap to mark as paid' : undefined}
                      trailing={<Taka poisha={p.amountPoisha} className={cn('text-[16px] font-semibold', p.from === me ? 'text-owe' : p.to === me ? 'text-owed' : 'text-slate-700')} />}
-                     chevron={!!actionable} />
+                     chevron={involved} />
           );
         })}
       </ListGroup>
       <p className="-mt-3 px-1 text-[13px] text-slate-500">The fewest payments that square everyone. Any payment counts.</p>
 
-      <Sheet open={!!open} onClose={() => setOpen(null)} title={leaderMode ? 'Record payment' : 'Mark as paid'}
+      <Sheet open={!!open} onClose={() => setOpen(null)} title="Mark as paid"
              footer={open && (
                <div className="space-y-2">
                  <Button block size="lg" busy={busy} onClick={() => act(open)}>
-                   {leaderMode ? 'Record this payment' : open.from === me ? 'I paid this' : 'I received this'}
+                   {open.from === me ? 'I paid this' : 'I received this'}
                  </Button>
-                 {open.from === me && !leaderMode && (
+                 {open.from === me && (
                    <Button block variant="secondary" onClick={async () => {
                      // F-04 fallback: there is no documented bKash/Nagad P2P deep
                      // link that prefills an amount, so copy it instead.
@@ -104,8 +95,7 @@ export function SettleSuggestions({ groupId, me, nets, name, tripId, leaderMode 
             <p className="text-[16px] text-slate-700">{who(open.from)} {open.from === me ? 'pay' : 'pays'} {who(open.to, false)}</p>
             <p className="font-display text-[32px] font-semibold text-slate-900 tnum">{formatTaka(open.amountPoisha)}</p>
             <p className="text-[14px] text-slate-500">
-              {leaderMode ? 'Recorded straight away. Both of them will see it.'
-                : open.from === me ? `${name(open.to)} confirms before it counts. Paying in an app doesn’t record it here.`
+              {open.from === me ? `${name(open.to)} confirms before it counts. Paying in an app doesn’t record it here.`
                 : `${name(open.from)} confirms before it counts.`}
             </p>
           </div>

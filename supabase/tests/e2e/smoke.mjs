@@ -1,7 +1,7 @@
 // Browser smoke test: three users drive the real app against real PostgREST.
-// Covers the Phase 1–4 exit conditions end to end: group + invite + join,
+// Covers the Phase 1–3 exit conditions end to end: group + invite + join,
 // expenses, a three-party transfer approved on "three devices", the
-// derivation self-check, a two-sided settlement, and a trip.
+// derivation self-check, and a two-sided settlement.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 
@@ -140,14 +140,8 @@ try {
   await expectText(rafi, 'Approved by everyone');
   step('two-sided settlement confirmed');
 
-  // D-01 trip, D-02 leader entry, D-12 non-leader note
-  await arif.goto(groupUrl + '/trips');
-  await arif.getByRole('button', { name: /Start a trip|New trip/ }).first().click();
-  await arif.getByLabel('Trip name').fill('Sylhet Tour');
-  await arif.getByRole('button', { name: 'Start trip' }).click();
-  await expectText(arif, 'Trip so far');
-  const tripUrl = arif.url();
-  await arif.getByRole('link', { name: /Add expense/ }).click();
+  // B-01 rounding: ৳100 split three ways shows the extra poisha
+  await arif.goto(groupUrl + '/add');
   await arif.getByLabel('Amount (৳)').fill('100');
   await arif.getByLabel('What was it?').fill('Auto rickshaw');
   await arif.getByRole('button', { name: /^Split/ }).click();
@@ -155,11 +149,8 @@ try {
   await arif.getByRole('button', { name: 'Done', exact: true }).click();
   await arif.getByRole('button', { name: /Save ৳100.00/ }).click();
   await expectText(arif, 'Auto rickshaw');
-  await shot(arif, '12-trip-dashboard');
-  await sami.goto(tripUrl.replace(/^https?:\/\/[^/]+/, APP));
-  await expectText(sami, 'Only leaders add expenses on this trip');
-  await shot(sami, '13-trip-non-leader');
-  step('trip: leader added, non-leader sees who to ask');
+  await shot(arif, '12-rounding');
+  step('uneven split recorded with its extra poisha');
 
   // B-05 history
   await arif.goto(groupUrl + '/history');

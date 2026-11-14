@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Flag, Receipt } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 import { Taka } from './Money';
 import { cn } from '@/lib/format';
 import type { Expense } from '@/lib/types';
-import type { Attribution } from '@/lib/rpc';
 
 function DateTile({ iso, muted }: { iso: string; muted?: boolean }) {
   const d = new Date(iso);
@@ -18,25 +17,22 @@ function DateTile({ iso, muted }: { iso: string; muted?: boolean }) {
 
 /**
  * One expense.  "Paid by" and "added by" are always shown distinctly (§13.3),
- * leader actions are labelled, and a voided expense is struck through with who
- * cancelled it — never hidden (B-05#2).  Render inside a ListGroup.
+ * and a voided expense is struck through with the reason — never hidden
+ * (B-05#2).  Render inside a ListGroup.
  */
-export function ExpenseRow({ expense: e, groupId, me, name, attribution, dateTile = true }: {
+export function ExpenseRow({ expense: e, groupId, me, name, dateTile = true }: {
   expense: Expense; groupId: string; me: string;
-  name: (id: string | null) => string; attribution?: Attribution;
+  name: (id: string | null) => string;
   /** Off where rows already sit under a date heading. */
   dateTile?: boolean;
 }) {
   const mine = e.expense_shares?.find((s) => s.user_id === me)?.share_poisha ?? 0;
   const voided = !!e.voided_at;
-  const openDisputes = e.entry_disputes?.filter((d) => d.status === 'open').length ?? 0;
-  const enteredBy = e.created_by !== e.payer_id || attribution?.entered_by_leader;
   const lent = e.payer_id === me ? e.total_poisha - mine : 0;
 
   const subtitle = voided
-    ? `${attribution?.voided_by_agreement ? 'Cancelled by agreement'
-      : `Cancelled by ${name(e.voided_by)}${attribution?.voided_by_leader ? ' (trip leader)' : ''}`}: ${e.void_reason}`
-    : `Paid by ${name(e.payer_id)}${enteredBy ? `, added by ${name(e.created_by)}${attribution?.entered_by_leader ? ' (trip leader)' : ''}` : ''}`;
+    ? `Cancelled by agreement: ${e.void_reason}`
+    : `Paid by ${name(e.payer_id)}${e.created_by !== e.payer_id ? `, added by ${name(e.created_by)}` : ''}`;
 
   return (
     <Link to={`/groups/${groupId}/expenses/${e.id}`}
@@ -47,14 +43,7 @@ export function ExpenseRow({ expense: e, groupId, me, name, attribution, dateTil
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className={cn('truncate text-[16px] font-medium text-slate-900', voided && 'text-slate-400 line-through')}>{e.description}</span>
-          {openDisputes > 0 && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-pending-soft px-1.5 py-0.5 text-[11px] font-semibold text-pending">
-              <Flag size={11} aria-hidden /> Questioned
-            </span>
-          )}
-        </span>
+        <span className={cn('block truncate text-[16px] font-medium text-slate-900', voided && 'text-slate-400 line-through')}>{e.description}</span>
         <span className="mt-0.5 block truncate text-[13px] text-slate-500">{subtitle}</span>
       </span>
       <span className="shrink-0 text-right">

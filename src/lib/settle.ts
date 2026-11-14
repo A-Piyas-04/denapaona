@@ -2,7 +2,7 @@
  * Settlement optimisation (Feature 3, §9.3).  A pure function over derived
  * balances.  It SUGGESTS payments; it never writes to the ledger.  Acting on a
  * suggestion opens a settlement proposal that still needs the counterparty's
- * approval (or, inside an active trip, is recorded by a leader).
+ * approval.
  */
 
 export interface Payment {

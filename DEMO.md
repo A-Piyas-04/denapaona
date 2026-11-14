@@ -1,6 +1,6 @@
 # Trying the app with demo data
 
-A local copy of HishebNama with a realistic set of groups, expenses, trips and requests. It runs entirely on your machine and needs no Supabase project or Google account.
+A local copy of HishebNama with a realistic set of groups, expenses and requests. It runs entirely on your machine and needs no Supabase project or Google account.
 
 ## How to start
 
@@ -50,10 +50,10 @@ The terminal also prints the invite link for each group, which is handy for tryi
 
 | User | Sign-in email | Groups | Good for trying |
 |---|---|---|---|
-| Arif | arif@test.local | Hall 3 Friends, Flat 4B, Office Lunch | Group owner and trip leader. Has a payment to confirm. |
-| Sami | sami@test.local | Hall 3 Friends, Office Lunch, Badminton Club | On the Cox's Bazar trip but not a leader, so he sees "ask a leader". Sent a transfer. |
-| Rafi | rafi@test.local | Hall 3 Friends, Badminton Club | Trip leader: record payments, void and re-enter. Has a cancellation to approve. |
-| Nadia | nadia@test.local | Hall 3 Friends, Flat 4B | Owner of Flat 4B. Questioned the jet ski expense. Has a payment to confirm. |
+| Arif | arif@test.local | Hall 3 Friends, Flat 4B, Office Lunch | Owner of Hall 3 Friends. Has a payment to confirm. |
+| Sami | sami@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Owner of Badminton Club. Sent a transfer; has a cancellation to approve. |
+| Rafi | rafi@test.local | Hall 3 Friends, Badminton Club | Has a transfer and a cancellation to approve. |
+| Nadia | nadia@test.local | Hall 3 Friends, Flat 4B | Owner of Flat 4B. Has a payment to confirm. |
 | Imran | imran@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Owner of Office Lunch. Has requests to approve. |
 | Mitu | mitu@test.local | Flat 4B, Office Lunch, Badminton Club | Sent a payment. Has a cancellation to approve. |
 | Joya | joya@test.local | Flat 4B, Office Lunch | Has a correction waiting for her approval. |
@@ -62,10 +62,7 @@ The terminal also prints the invite link for each group, which is handy for tryi
 ## What's in the data
 
 - **4 groups:** Hall 3 Friends, Flat 4B, Office Lunch and Badminton Club.
-- **About 40 expenses** over the last five weeks. Most are split equally; some are entered item by item.
-- **Trips:**
-  - Cox's Bazar Tour is in progress. Only leaders can add to it. It has a voided and re-entered expense, a questioned expense, and a payment recorded by a leader.
-  - Sylhet Weekend is closed.
+- **About 40 expenses** over the last five weeks. Most are split equally; some are entered item by item. One duplicate was cancelled by agreement.
 - **Requests in every state:**
   - Approved, declined and withdrawn ones in the history.
   - Six waiting right now: payments, a transfer, a correction and a cancellation.
