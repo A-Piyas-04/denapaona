@@ -12,8 +12,7 @@ do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     alter publication supabase_realtime
-      add table proposals, proposal_participants, ledger_entries,
-                expenses, trips, trip_leaders, entry_disputes;
+      add table proposals, proposal_participants, ledger_entries, expenses;
   end if;
 end $$;
 

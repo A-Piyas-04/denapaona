@@ -25,7 +25,6 @@ declare
   v_inter    uuid;
   v_creditor uuid;
   v_amount   bigint;
-  v_trip     uuid;
   v_target   uuid;
 begin
   if v_actor is null then raise exception 'AUTH_REQUIRED'; end if;
@@ -84,9 +83,6 @@ begin
 
   -- ══ ALL APPROVED — RE-VALIDATE AGAINST LIVE BALANCES AND COMMIT ══
   v_payload := v_prop.payload;
-  -- trip_id on a proposal entry is a reporting dimension copied from the
-  -- payload (§8.2 note).  It never affects validation or netting.
-  v_trip    := nullif(v_payload ->> 'trip_id', '')::uuid;
 
   if v_prop.type = 'transfer' then
     v_debtor   := (v_payload ->> 'debtor')::uuid;
@@ -106,11 +102,11 @@ begin
     end if;
 
     insert into public.ledger_entries
-      (group_id, trip_id, from_user, to_user, amount_poisha, source_type, source_id)
+      (group_id, from_user, to_user, amount_poisha, source_type, source_id)
     values
-      (v_prop.group_id, v_trip, v_inter,    v_debtor,   v_amount, 'proposal', p_proposal_id),
-      (v_prop.group_id, v_trip, v_creditor, v_inter,    v_amount, 'proposal', p_proposal_id),
-      (v_prop.group_id, v_trip, v_debtor,   v_creditor, v_amount, 'proposal', p_proposal_id);
+      (v_prop.group_id, v_inter,    v_debtor,   v_amount, 'proposal', p_proposal_id),
+      (v_prop.group_id, v_creditor, v_inter,    v_amount, 'proposal', p_proposal_id),
+      (v_prop.group_id, v_debtor,   v_creditor, v_amount, 'proposal', p_proposal_id);
 
   elsif v_prop.type = 'settlement' then
     v_debtor   := (v_payload ->> 'debtor')::uuid;
@@ -126,9 +122,9 @@ begin
     end if;
 
     insert into public.ledger_entries
-      (group_id, trip_id, from_user, to_user, amount_poisha, source_type, source_id)
+      (group_id, from_user, to_user, amount_poisha, source_type, source_id)
     values
-      (v_prop.group_id, v_trip, v_creditor, v_debtor, v_amount, 'proposal', p_proposal_id);
+      (v_prop.group_id, v_creditor, v_debtor, v_amount, 'proposal', p_proposal_id);
 
   elsif v_prop.type = 'amendment' then
     v_debtor   := (v_payload ->> 'from_user')::uuid;
@@ -137,8 +133,8 @@ begin
 
     if (v_payload ->> 'direction') = 'increase' then
       insert into public.ledger_entries
-        (group_id, trip_id, from_user, to_user, amount_poisha, source_type, source_id)
-      values (v_prop.group_id, v_trip, v_debtor, v_creditor, v_amount,
+        (group_id, from_user, to_user, amount_poisha, source_type, source_id)
+      values (v_prop.group_id, v_debtor, v_creditor, v_amount,
               'proposal', p_proposal_id);
     else
       if public.net_owed_raw(v_prop.group_id, v_debtor, v_creditor) < v_amount then
@@ -149,16 +145,15 @@ begin
         return 'invalidated';
       end if;
       insert into public.ledger_entries
-        (group_id, trip_id, from_user, to_user, amount_poisha, source_type, source_id)
-      values (v_prop.group_id, v_trip, v_creditor, v_debtor, v_amount,
+        (group_id, from_user, to_user, amount_poisha, source_type, source_id)
+      values (v_prop.group_id, v_creditor, v_debtor, v_amount,
               'proposal', p_proposal_id);
     end if;
 
   elsif v_prop.type = 'void' then
     v_target := (v_payload ->> 'expense_id')::uuid;
 
-    -- Re-validate: the expense must still be un-voided. A leader may have
-    -- voided it while this proposal was pending.
+    -- Re-validate: the expense must still be un-voided.
     if exists (select 1 from public.expenses
                where id = v_target and voided_at is not null) then
       update public.proposals
@@ -170,8 +165,8 @@ begin
 
     -- Append the mirror of every entry the expense produced.
     insert into public.ledger_entries
-      (group_id, trip_id, from_user, to_user, amount_poisha, source_type, source_id)
-    select le.group_id, le.trip_id, le.to_user, le.from_user,
+      (group_id, from_user, to_user, amount_poisha, source_type, source_id)
+    select le.group_id, le.to_user, le.from_user,
            le.amount_poisha, 'expense', v_target
     from public.ledger_entries le
     where le.source_type = 'expense' and le.source_id = v_target;
@@ -181,10 +176,6 @@ begin
            voided_by = v_prop.proposer_id,
            void_reason = coalesce(v_prop.note, 'Cancelled by agreement')
      where id = v_target;
-
-    -- An open dispute on a cancelled expense has been answered.
-    update public.entry_disputes set status = 'resolved'
-     where expense_id = v_target and status = 'open';
 
   else
     raise exception 'UNKNOWN_PROPOSAL_TYPE: %', v_prop.type;

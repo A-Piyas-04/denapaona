@@ -22,6 +22,19 @@ npm run demo:reset
 
 Stop it with **Ctrl+C**.
 
+### Without Docker
+
+If PostgreSQL is installed on your machine (any version from 16 up), run this instead:
+
+```bash
+npm run dev:local          # keeps data between runs
+npm run dev:local:reset    # starts from fresh demo data
+```
+
+It creates its own database cluster in `.local/pgdata` on port 54329, so an existing PostgreSQL service is left alone. On the first run it downloads PostgREST into `.local/postgrest`. It looks for PostgreSQL in `PG_BIN`, then on `PATH`, then in `C:\Program Files\PostgreSQL`. Delete `.local` to remove everything it created.
+
+Live updates between two browser windows don't work locally, with or without Docker: there is no Realtime server. Switching back to a tab or reloading shows the latest data.
+
 ## Where to go
 
 | What | Address |
@@ -60,5 +73,5 @@ The terminal also prints the invite link for each group, which is handy for tryi
 
 ## Good to know
 
-- This is demo-only. The sign-in page stands in for Google, and the data lives in a Docker container named `hn-demo-pg`.
+- This is demo-only. The sign-in page stands in for Google, and the data lives in a Docker container named `hn-demo-pg` (or in `.local/pgdata` without Docker).
 - Nothing here touches a real Supabase project, and you should never deploy it.

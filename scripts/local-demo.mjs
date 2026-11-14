@@ -1,12 +1,18 @@
 // Local demo without a Supabase project — for looking at the app, never deploy.
 //
-//   npm run demo            reuse the demo database if it exists
-//   npm run demo:reset      start from a fresh, re-seeded database
+//   npm run demo                Docker: PostgreSQL 16 + PostgREST in containers
+//   npm run demo:reset          Docker, from a fresh, re-seeded database
+//   npm run dev:local           no Docker: a locally installed PostgreSQL + postgrest binary
+//   npm run dev:local:reset     no Docker, from a fresh, re-seeded database
 //
-// Runs the real migrations on PostgreSQL 16 + PostgREST in Docker (with the
-// test shim standing in for Supabase's auth schema), serves a stand-in for
-// Supabase Auth with a "pick a demo user" page instead of Google sign-in,
-// and starts Vite pointed at it.  Requires Docker.
+// Runs the real migrations (with the test shim standing in for Supabase's auth
+// schema) behind PostgREST, serves a stand-in for Supabase Auth with a "pick a
+// demo user" page instead of Google sign-in, and starts Vite pointed at it.
+//
+// --native keeps its own PostgreSQL cluster in .local/pgdata on port 54329, so an
+// existing PostgreSQL service is never touched.  It finds PostgreSQL through
+// PG_BIN, then PATH, then the default install folder, and downloads PostgREST
+// into .local/postgrest on first run.
 import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -20,11 +26,19 @@ const PG = 'hn-demo-pg';
 const REST_NAME = 'hn-demo-rest';
 const REST_PORT = 54340;
 const GATEWAY_PORT = 54341;
-const APP_PORT = 5173;
+const APP_PORT = Number(process.env.PORT) || 5173;
 const SECRET = 'local-demo-jwt-secret-at-least-32-characters-long';
 // Bump when scripts/demo-seed.sql changes, so an older demo database says so.
 const SEED_VERSION = 2;
 const reset = process.argv.includes('--reset');
+const native = process.argv.includes('--native');
+
+const LOCAL = path.join(ROOT, '.local');
+const PGDATA = path.join(LOCAL, 'pgdata');
+const PG_PORT = 54329;
+const POSTGREST_VERSION = 'v12.2.3';
+const WIN = process.platform === 'win32';
+const EXE = WIN ? '.exe' : '';
 
 // What each demo user is good for trying.  Shown on the sign-in page and in DEMO.md.
 const ROLES = {
@@ -46,32 +60,90 @@ function docker(args, { input, quiet = false, allowFail = false } = {}) {
   if (!quiet && r.stderr && r.status === 0) process.stderr.write(filterNoise(r.stderr));
   return r;
 }
-const filterNoise = (s) => s.split('\n').filter((l) => l && !/NOTICE/.test(l)).map((l) => l + '\n').join('');
-const psql = (sql, db = 'hn') =>
-  docker(['exec', '-i', PG, 'psql', '-U', 'postgres', '-d', db, '-v', 'ON_ERROR_STOP=1', '-q', '-X', '-tA'], { input: sql });
+const filterNoise = (s) => s.split(/\r?\n/).filter((l) => l && !/NOTICE/.test(l)).map((l) => l + '\n').join('');
+const lines = (s) => s.trim().split(/\r?\n/).filter(Boolean);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const running = (name) => docker(['ps', '--format', '{{.Names}}'], { quiet: true }).stdout.split('\n').includes(name);
-const exists = (name) => docker(['ps', '-a', '--format', '{{.Names}}'], { quiet: true }).stdout.split('\n').includes(name);
+const running = (name) => lines(docker(['ps', '--format', '{{.Names}}'], { quiet: true }).stdout).includes(name);
+const exists = (name) => lines(docker(['ps', '-a', '--format', '{{.Names}}'], { quiet: true }).stdout).includes(name);
 
-if (spawnSync('docker', ['info'], { encoding: 'utf8' }).status !== 0) {
-  console.error('Docker is not running. Start Docker Desktop, wait for it to be ready, then run `npm run demo` again.');
-  process.exit(1);
+function run(cmd, args, { input, allowFail = false, env } = {}) {
+  const r = spawnSync(cmd, args, { input, encoding: 'utf8', env: env ?? process.env });
+  if (r.error) throw r.error;
+  if (r.status !== 0 && !allowFail) {
+    throw new Error(`${path.basename(cmd)} ${args.join(' ')} failed:\n${r.stderr || r.stdout}`);
+  }
+  if (r.stderr && r.status === 0) process.stderr.write(filterNoise(r.stderr));
+  return r;
 }
+
+function findPgBin() {
+  const candidates = [process.env.PG_BIN];
+  const which = spawnSync(WIN ? 'where' : 'which', ['pg_ctl'], { encoding: 'utf8' });
+  if (which.status === 0) candidates.push(path.dirname(lines(which.stdout)[0]));
+  if (WIN) {
+    const base = 'C:\\Program Files\\PostgreSQL';
+    if (fs.existsSync(base)) {
+      for (const v of fs.readdirSync(base).sort((a, b) => Number(b) - Number(a))) candidates.push(path.join(base, v, 'bin'));
+    }
+  }
+  return candidates.find((d) => d && fs.existsSync(path.join(d, `pg_ctl${EXE}`)));
+}
+
+// psql reads the SQL files as UTF-8 and prints UTF-8, whatever the console code page.
+const PG_ENV = { ...process.env, PGCLIENTENCODING: 'UTF8' };
+let pgBin;
+const pgTool = (name) => path.join(pgBin, name + EXE);
+
+const psql = native
+  ? (sql, db = 'hn') => run(pgTool('psql'),
+      ['-h', 'localhost', '-p', String(PG_PORT), '-U', 'postgres', '-d', db, '-v', 'ON_ERROR_STOP=1', '-q', '-X', '-tA'],
+      { input: sql, env: PG_ENV })
+  : (sql, db = 'hn') =>
+      docker(['exec', '-i', PG, 'psql', '-U', 'postgres', '-d', db, '-v', 'ON_ERROR_STOP=1', '-q', '-X', '-tA'], { input: sql });
 
 // ── database ─────────────────────────────────────────────────────────────
-docker(['network', 'create', NET], { quiet: true, allowFail: true });
-if (reset) docker(['rm', '-f', PG, REST_NAME], { quiet: true, allowFail: true });
+let fresh = reset;
+if (native) {
+  pgBin = findPgBin();
+  if (!pgBin) {
+    console.error('PostgreSQL was not found. Install it (https://www.postgresql.org/download/), or set PG_BIN to its bin folder, then run `npm run dev:local` again.');
+    process.exit(1);
+  }
+  if (!fs.existsSync(path.join(PGDATA, 'PG_VERSION'))) {
+    console.log(`── creating a local PostgreSQL cluster in .local/pgdata (${pgBin})`);
+    fs.mkdirSync(LOCAL, { recursive: true });
+    run(pgTool('initdb'), ['-D', PGDATA, '-U', 'postgres', '-A', 'trust', '-E', 'UTF8', '--no-locale']);
+    fresh = true;
+  }
+  if (spawnSync(pgTool('pg_ctl'), ['status', '-D', PGDATA], { stdio: 'ignore' }).status !== 0) {
+    console.log(`── starting PostgreSQL on port ${PG_PORT}`);
+    // stdio 'ignore': the server outlives pg_ctl, and inherited pipes would keep spawnSync waiting.
+    const r = spawnSync(pgTool('pg_ctl'), ['start', '-D', PGDATA, '-w', '-l', path.join(LOCAL, 'postgres.log'),
+      '-o', `-p ${PG_PORT} -c listen_addresses=localhost`], { stdio: 'ignore' });
+    if (r.status !== 0) {
+      console.error(`PostgreSQL did not start. See ${path.join(LOCAL, 'postgres.log')}`);
+      process.exit(1);
+    }
+  }
+  while (spawnSync(pgTool('pg_isready'), ['-h', 'localhost', '-p', String(PG_PORT), '-U', 'postgres', '-q']).status !== 0) await sleep(500);
+} else {
+  if (spawnSync('docker', ['info'], { encoding: 'utf8' }).status !== 0) {
+    console.error('Docker is not running. Start Docker Desktop, wait for it to be ready, then run `npm run demo` again.\nTo run without Docker, use `npm run dev:local` instead.');
+    process.exit(1);
+  }
+  docker(['network', 'create', NET], { quiet: true, allowFail: true });
+  if (reset) docker(['rm', '-f', PG, REST_NAME], { quiet: true, allowFail: true });
 
-let fresh = false;
-if (!exists(PG)) {
-  console.log('── starting PostgreSQL 16');
-  docker(['run', '-d', '--name', PG, '--network', NET, '-e', 'POSTGRES_PASSWORD=demo', 'postgres:16-alpine']);
-  fresh = true;
-} else if (!running(PG)) {
-  docker(['start', PG], { quiet: true });
+  if (!exists(PG)) {
+    console.log('── starting PostgreSQL 16');
+    docker(['run', '-d', '--name', PG, '--network', NET, '-e', 'POSTGRES_PASSWORD=demo', 'postgres:16-alpine']);
+    fresh = true;
+  } else if (!running(PG)) {
+    docker(['start', PG], { quiet: true });
+  }
+  // -h 127.0.0.1: the image's init-time server listens on the socket only.
+  while (spawnSync('docker', ['exec', PG, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-q']).status !== 0) await sleep(500);
 }
-// -h 127.0.0.1: the image's init-time server listens on the socket only.
-while (spawnSync('docker', ['exec', PG, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-q']).status !== 0) await sleep(500);
 
 const ready = psql(`select 1 from pg_database where datname = 'hn'`, 'postgres').stdout.trim() === '1'
   && psql(`select to_regclass('t.demo_ready') is not null`).stdout.trim() === 't';
@@ -82,7 +154,7 @@ if (!fresh && !ready) {
 
 if (fresh) {
   console.log('── applying shim and migrations');
-  psql('drop database if exists hn', 'postgres');
+  psql('drop database if exists hn with (force)', 'postgres');
   psql('create database hn', 'postgres');
   const dir = (d) => fs.readdirSync(d).filter((f) => f.endsWith('.sql')).sort().map((f) => path.join(d, f));
   for (const f of [...dir(path.join(ROOT, 'supabase/tests/shim')), ...dir(path.join(ROOT, 'supabase/migrations'))]) {
@@ -103,13 +175,57 @@ if (fresh) {
 const seedCurrent = psql(`select to_regclass('t.demo_seed_v${SEED_VERSION}') is not null`).stdout.trim() === 't';
 
 // ── PostgREST ────────────────────────────────────────────────────────────
-if (!running(REST_NAME)) {
+async function installPostgrest(exe) {
+  const asset = { win32: 'windows-x64.zip', linux: 'linux-static-x64.tar.xz', darwin: 'macos-x64.tar.xz' }[process.platform];
+  if (!asset) throw new Error(`No PostgREST build for ${process.platform}; put a postgrest binary at ${exe}`);
+  const url = `https://github.com/PostgREST/postgrest/releases/download/${POSTGREST_VERSION}/postgrest-${POSTGREST_VERSION}-${asset}`;
+  console.log(`── downloading PostgREST ${POSTGREST_VERSION}`);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`download failed (${res.status}): ${url}`);
+  const dir = path.dirname(exe);
+  fs.mkdirSync(dir, { recursive: true });
+  const archive = path.join(dir, asset);
+  fs.writeFileSync(archive, Buffer.from(await res.arrayBuffer()));
+  // Windows' own bsdtar reads zip; a Git-for-Windows tar on PATH would not.
+  run(WIN ? path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe') : 'tar', ['-xf', archive, '-C', dir]);
+  fs.rmSync(archive);
+  const found = fs.readdirSync(dir, { recursive: true }).find((f) => path.basename(f) === path.basename(exe));
+  if (!found) throw new Error(`PostgREST archive did not contain ${path.basename(exe)}`);
+  if (path.join(dir, found) !== exe) fs.renameSync(path.join(dir, found), exe);
+}
+
+let rest;
+if (native) {
+  const exe = path.join(LOCAL, 'postgrest', `postgrest${EXE}`);
+  if (!fs.existsSync(exe)) await installPostgrest(exe);
+  const pidFile = path.join(LOCAL, 'postgrest.pid');
+  if (fs.existsSync(pidFile)) {
+    try { process.kill(Number(fs.readFileSync(pidFile, 'utf8'))); } catch { /* already gone */ }
+    await sleep(300);
+  }
+  console.log('── starting PostgREST');
+  const log = fs.openSync(path.join(LOCAL, 'postgrest.log'), 'w');
+  rest = spawn(exe, [], {
+    stdio: ['ignore', log, log],
+    env: {
+      ...process.env,
+      PGRST_DB_URI: `postgres://authenticator:auth@localhost:${PG_PORT}/hn`,
+      PGRST_DB_SCHEMAS: 'public', PGRST_DB_ANON_ROLE: 'anon',
+      PGRST_JWT_SECRET: SECRET, PGRST_SERVER_PORT: String(REST_PORT),
+    },
+  });
+  fs.writeFileSync(pidFile, String(rest.pid));
+  rest.on('exit', (code) => {
+    console.error(`PostgREST stopped (exit ${code}). See ${path.join(LOCAL, 'postgrest.log')}`);
+    process.exit(1);
+  });
+} else if (!running(REST_NAME)) {
   docker(['rm', '-f', REST_NAME], { quiet: true, allowFail: true });
   console.log('── starting PostgREST');
   docker(['run', '-d', '--name', REST_NAME, '--network', NET, '-p', `${REST_PORT}:3000`,
     '-e', `PGRST_DB_URI=postgres://authenticator:auth@${PG}:5432/hn`,
     '-e', 'PGRST_DB_SCHEMAS=public', '-e', 'PGRST_DB_ANON_ROLE=anon',
-    '-e', `PGRST_JWT_SECRET=${SECRET}`, 'postgrest/postgrest:v12.2.3']);
+    '-e', `PGRST_JWT_SECRET=${SECRET}`, `postgrest/postgrest:${POSTGREST_VERSION}`]);
 }
 for (;;) {
   try { if ((await fetch(`http://localhost:${REST_PORT}/`)).ok) break; } catch { /* starting */ }
@@ -123,12 +239,12 @@ function mint(id, email) {
   const p = b64({ sub: id, role: 'authenticated', aud: 'authenticated', email, exp: Math.floor(Date.now() / 1000) + 30 * 86400 });
   return `${h}.${p}.${crypto.createHmac('sha256', SECRET).update(`${h}.${p}`).digest('base64url')}`;
 }
-const users = () => psql(`
+const users = () => lines(psql(`
     select p.id || '|' || p.display_name || '|' || coalesce(p.email, '') || '|' ||
            coalesce((select string_agg(g.name, ', ' order by g.name) from public.group_members m
                      join public.groups g on g.id = m.group_id where m.user_id = p.id), '')
     from public.profiles p order by p.created_at, p.display_name`)
-  .stdout.trim().split('\n').filter(Boolean).map((l) => {
+  .stdout).map((l) => {
     const [id, name, email, groups] = l.split('|');
     return { id, name, email, groups };
   });
@@ -227,8 +343,9 @@ const vite = spawn(process.execPath, [path.join(ROOT, 'node_modules/vite/bin/vit
 vite.stdout.on('data', (d) => {
   if (/ready in/.test(d.toString())) {
     const people = users();
-    const codes = psql(`select name || '|' || invite_code from public.groups order by name`).stdout.trim().split('\n').filter(Boolean)
+    const codes = lines(psql(`select name || '|' || invite_code from public.groups order by name`).stdout)
       .map((l) => l.split('|'));
+    const resetCmd = native ? 'npm run dev:local:reset' : 'npm run demo:reset';
     const w = Math.max(...people.map((u) => u.name.length));
     console.log(`
 ── demo running
@@ -241,11 +358,22 @@ ${people.map((u) => `     ${u.name.padEnd(w)}  ${u.email.padEnd(w + 12)}  ${u.gr
    Invite links (for Tania, or anyone)
 ${codes.map(([n, c]) => `     ${n.padEnd(16)}  http://localhost:${APP_PORT}/join/${c}`).join('\n')}
 
-   Data is kept between runs; \`npm run demo:reset\` starts over.  Ctrl+C to stop.
-${seedCurrent ? '' : '\n   ⚠ This demo database has older demo data. Run `npm run demo:reset` for the full set.\n'}`);
+   Data is kept between runs; \`${resetCmd}\` starts over.  Ctrl+C to stop.
+${seedCurrent ? '' : `\n   ⚠ This demo database has older demo data. Run \`${resetCmd}\` for the full set.\n`}`);
   }
 });
-const stop = () => { vite.kill(); docker(['stop', REST_NAME, PG], { quiet: true, allowFail: true }); process.exit(0); };
-process.on('SIGINT', stop);
-process.on('SIGTERM', stop);
-vite.on('exit', (code) => { if (code) process.exit(code); });
+const stop = (code = 0) => {
+  vite.kill();
+  if (native) {
+    rest.removeAllListeners('exit');
+    rest.kill();
+    fs.rmSync(path.join(LOCAL, 'postgrest.pid'), { force: true });
+    spawnSync(pgTool('pg_ctl'), ['stop', '-D', PGDATA, '-m', 'fast'], { stdio: 'ignore' });
+  } else {
+    docker(['stop', REST_NAME, PG], { quiet: true, allowFail: true });
+  }
+  process.exit(code);
+};
+process.on('SIGINT', () => stop());
+process.on('SIGTERM', () => stop());
+vite.on('exit', (code) => { if (code) stop(code); });

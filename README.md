@@ -39,7 +39,7 @@ npm run dev
 
 **Never put the service role key in any `VITE_` variable** (§12.2). The anon key is public by design.
 
-To try the app without a Supabase project, run `npm run demo` (Docker required). It loads a full set of demo groups, trips and requests. See [`DEMO.md`](DEMO.md) for the demo users and what each is good for.
+To try the app without a Supabase project, run `npm run demo` (Docker required), or `npm run dev:local` (no Docker; uses a locally installed PostgreSQL). Both load a full set of demo groups, trips and requests. See [`DEMO.md`](DEMO.md) for the demo users and what each is good for.
 
 ## Tests
 

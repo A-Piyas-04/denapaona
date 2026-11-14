@@ -8,6 +8,8 @@
     "dev": "vite",
     "demo": "node scripts/local-demo.mjs",
     "demo:reset": "node scripts/local-demo.mjs --reset",
+    "dev:local": "node scripts/local-demo.mjs --native",
+    "dev:local:reset": "node scripts/local-demo.mjs --native --reset",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

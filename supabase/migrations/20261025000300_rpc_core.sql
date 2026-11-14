@@ -109,7 +109,6 @@ declare
   v_actor  uuid := auth.uid();
   v_net    bigint;
   v_owners int;
-  v_lead   int;
 begin
   if v_actor is null then raise exception 'AUTH_REQUIRED'; end if;
 
@@ -138,15 +137,6 @@ begin
                               where group_id = p_group_id and user_id = v_actor
                                 and role = 'owner') then
     raise exception 'LAST_OWNER_MUST_TRANSFER_OWNERSHIP';
-  end if;
-
-  select count(*) into v_lead
-  from public.trip_leaders l
-  join public.trips t on t.id = l.trip_id
-  where t.group_id = p_group_id and t.status = 'active' and l.user_id = v_actor;
-
-  if v_lead > 0 then
-    raise exception 'STILL_AN_ACTIVE_TRIP_LEADER';
   end if;
 
   delete from public.group_members
@@ -180,7 +170,7 @@ begin
 end $$;
 
 -- ─────────────────────────────────────────────────────────────
--- EXPENSES  (§11.2, plus the trip changes from §11.7)
+-- EXPENSES  (§11.2)
 -- ─────────────────────────────────────────────────────────────
 create or replace function add_expense(
   p_group_id     uuid,
@@ -188,7 +178,6 @@ create or replace function add_expense(
   p_total        bigint,
   p_description  text,
   p_shares       jsonb,                 -- [{"user_id":"...","share":1234}, ...]
-  p_trip_id      uuid default null,     -- added in v1.1
   p_client_token uuid default null      -- retry guard, USER_STORIES §12.1
 ) returns uuid
 language plpgsql
@@ -203,8 +192,6 @@ declare
   v_uid        uuid;
   v_amt        bigint;
   v_others     int := 0;
-  v_status     text;
-  v_mode       text;
 begin
   if v_actor is null then
     raise exception 'AUTH_REQUIRED';
@@ -240,20 +227,6 @@ begin
     if found then return v_expense_id; end if;
   end if;
 
-  -- Trip scope and entry mode (§11.7, Feature 4.3)
-  if p_trip_id is not null then
-    select status, entry_mode into v_status, v_mode
-    from public.trips where id = p_trip_id and group_id = p_group_id;
-
-    if not found then raise exception 'TRIP_NOT_IN_GROUP'; end if;
-    if v_status <> 'active' then raise exception 'TRIP_CLOSED'; end if;
-
-    if v_mode = 'leaders_only'
-       and not public.is_trip_leader(p_trip_id, v_actor) then
-      raise exception 'LEADERS_ONLY_TRIP';
-    end if;
-  end if;
-
   -- validate shares: every user is a member, amounts non-negative, sum matches
   for v_share in select * from jsonb_array_elements(p_shares) loop
     v_uid := (v_share ->> 'user_id')::uuid;
@@ -283,9 +256,9 @@ begin
     raise exception 'NEEDS_ANOTHER_PARTICIPANT';
   end if;
 
-  insert into public.expenses (group_id, trip_id, payer_id, total_poisha,
+  insert into public.expenses (group_id, payer_id, total_poisha,
                                description, created_by, client_token)
-  values (p_group_id, p_trip_id, p_payer_id, p_total, trim(p_description),
+  values (p_group_id, p_payer_id, p_total, trim(p_description),
           v_actor, p_client_token)
   returning id into v_expense_id;
 
@@ -295,9 +268,9 @@ begin
 
   -- emit one ledger entry per non-payer with a non-zero share
   insert into public.ledger_entries
-         (group_id, trip_id, from_user, to_user, amount_poisha,
+         (group_id, from_user, to_user, amount_poisha,
           source_type, source_id)
-  select p_group_id, p_trip_id, (s ->> 'user_id')::uuid, p_payer_id,
+  select p_group_id, (s ->> 'user_id')::uuid, p_payer_id,
          (s ->> 'share')::bigint, 'expense', v_expense_id
   from jsonb_array_elements(p_shares) s
   where (s ->> 'user_id')::uuid <> p_payer_id
@@ -450,8 +423,7 @@ create or replace function propose_settlement(
   p_debtor   uuid,
   p_creditor uuid,
   p_amount   bigint,
-  p_note     text default null,
-  p_trip_id  uuid default null
+  p_note     text default null
 ) returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -470,12 +442,6 @@ begin
     raise exception 'ALL_PARTIES_MUST_BE_MEMBERS';
   end if;
 
-  if p_trip_id is not null
-     and not exists (select 1 from public.trips
-                     where id = p_trip_id and group_id = p_group_id) then
-    raise exception 'TRIP_NOT_IN_GROUP';
-  end if;
-
   perform public.assert_proposal_rate_ok(p_group_id, v_actor);
 
   perform pg_advisory_xact_lock(hashtextextended(p_group_id::text, 0));
@@ -487,7 +453,7 @@ begin
   insert into public.proposals (group_id, type, proposer_id, payload, note)
   values (p_group_id, 'settlement', v_actor,
           jsonb_build_object('debtor', p_debtor, 'creditor', p_creditor,
-                             'amount', p_amount, 'trip_id', p_trip_id),
+                             'amount', p_amount),
           p_note)
   returning id into v_id;
 
@@ -506,8 +472,7 @@ create or replace function propose_amendment(
   p_to_user   uuid,
   p_amount    bigint,
   p_direction text,              -- 'increase' | 'decrease'
-  p_note      text default null,
-  p_trip_id   uuid default null
+  p_note      text default null
 ) returns uuid
 language plpgsql security definer set search_path = ''
 as $$
@@ -529,12 +494,6 @@ begin
     raise exception 'ALL_PARTIES_MUST_BE_MEMBERS';
   end if;
 
-  if p_trip_id is not null
-     and not exists (select 1 from public.trips
-                     where id = p_trip_id and group_id = p_group_id) then
-    raise exception 'TRIP_NOT_IN_GROUP';
-  end if;
-
   perform public.assert_proposal_rate_ok(p_group_id, v_actor);
 
   perform pg_advisory_xact_lock(hashtextextended(p_group_id::text, 0));
@@ -549,8 +508,7 @@ begin
   insert into public.proposals (group_id, type, proposer_id, payload, note)
   values (p_group_id, 'amendment', v_actor,
           jsonb_build_object('from_user', p_from_user, 'to_user', p_to_user,
-                             'amount', p_amount, 'direction', p_direction,
-                             'trip_id', p_trip_id),
+                             'amount', p_amount, 'direction', p_direction),
           p_note)
   returning id into v_id;
 

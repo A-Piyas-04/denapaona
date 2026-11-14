@@ -2,12 +2,8 @@
 -- HishebNama — complete schema (DEVELOPMENT_PLAN.md §8.2)
 --
 -- Phase 0, ordering rule: "Full schema in the first migration."  ledger_entries
--- is append-only, so a trip_id column added later would be permanently NULL for
--- every entry written before it existed.  Everything lands at once.
---
--- DIVERGENCE FROM §8.2 (ordering only, no semantic change): the plan lists
--- entry_disputes before expenses, but it carries a foreign key to expenses(id).
--- Tables are therefore created in dependency order here.
+-- is append-only, so a column added later would be permanently NULL for every
+-- entry written before it existed.  Everything lands at once.
 -- ═══════════════════════════════════════════════════════════════════════════
 
 create extension if not exists pgcrypto;
@@ -93,75 +89,11 @@ create table group_members (
 create index on group_members (user_id);
 
 -- ─────────────────────────────────────────────────────────────
--- TRIPS  (a SCOPE over expenses — never a separate ledger)
--- ─────────────────────────────────────────────────────────────
-create table trips (
-  id          uuid primary key default gen_random_uuid(),
-  group_id    uuid not null references groups(id) on delete cascade,
-  name        text not null check (length(trim(name)) between 1 and 60),
-  started_on  date not null default current_date,
-  ended_on    date,
-  status      text not null default 'active' check (status in ('active', 'closed')),
-  entry_mode  text not null default 'leaders_only'
-                check (entry_mode in ('leaders_only', 'open')),
-  created_by  uuid not null references profiles(id),
-  created_at  timestamptz not null default now()
-);
-
-create index on trips (group_id, status, started_on desc);
-
--- Trip leaders: the trusted few who record and correct without consent.
--- Authority is scoped to this trip and lapses when the trip closes.
-create table trip_leaders (
-  trip_id      uuid not null references trips(id) on delete cascade,
-  user_id      uuid not null references profiles(id),
-  appointed_by uuid not null references profiles(id),
-  appointed_at timestamptz not null default now(),
-  primary key (trip_id, user_id)
-);
-
--- Audit of leader appointments and removals.
-create table trip_leader_log (
-  id         uuid primary key default gen_random_uuid(),
-  trip_id    uuid not null references trips(id) on delete cascade,
-  user_id    uuid not null references profiles(id),
-  action     text not null check (action in ('appointed', 'removed',
-                                             'trip_closed', 'trip_reopened')),
-  actor_id   uuid not null references profiles(id),
-  -- clock_timestamp(), not now(): now() is fixed for a whole transaction, so two
-  -- log rows written in one transaction (appoint then remove) would tie, and
-  -- was_trip_leader_at() — which reconstructs the role at a past moment for the
-  -- derivation (story E-03) — needs a strict order.
-  created_at timestamptz not null default clock_timestamp()
-);
-
-create index on trip_leader_log (trip_id, created_at desc);
-
--- Default participant list for new expenses on this trip. Convenience only:
--- it restricts nothing, and an expense may name people outside the roster.
-create table trip_members (
-  trip_id uuid not null references trips(id) on delete cascade,
-  user_id uuid not null references profiles(id),
-  primary key (trip_id, user_id)
-);
-
--- Saved participant subsets, e.g. "the three who went to the fort".
-create table trip_presets (
-  id       uuid primary key default gen_random_uuid(),
-  trip_id  uuid not null references trips(id) on delete cascade,
-  label    text not null check (length(trim(label)) between 1 and 40),
-  user_ids uuid[] not null check (array_length(user_ids, 1) >= 2)
-);
-
-create index on trip_presets (trip_id);
-
--- ─────────────────────────────────────────────────────────────
 -- EXPENSES  (immutable once created)
 -- ─────────────────────────────────────────────────────────────
 create table expenses (
   id           uuid primary key default gen_random_uuid(),
   group_id     uuid not null references groups(id) on delete cascade,
-  trip_id      uuid references trips(id) on delete set null,  -- NULL = not on a trip
   payer_id     uuid not null references profiles(id),
   total_poisha bigint not null check (total_poisha > 0),
   description  text not null check (length(trim(description)) between 1 and 200),
@@ -190,7 +122,6 @@ create table expenses (
 
 create unique index on expenses (group_id, client_token) where client_token is not null;
 create index on expenses (group_id, created_at desc);
-create index on expenses (trip_id, created_at desc) where trip_id is not null;
 -- Supports the B-03 duplicate-expense warning (same payer, same amount, recent).
 create index on expenses (group_id, payer_id, total_poisha, created_at desc);
 
@@ -202,28 +133,12 @@ create table expense_shares (
 );
 -- INVARIANT (enforced in add_expense): sum(share_poisha) = expenses.total_poisha
 
--- Member-raised dispute on an entry. Flags and notifies; never auto-reverts,
--- because auto-reversal would restore the unilateral power leaders replaced.
-create table entry_disputes (
-  id         uuid primary key default gen_random_uuid(),
-  expense_id uuid not null references expenses(id) on delete cascade,
-  raised_by  uuid not null references profiles(id),
-  reason     text not null check (length(trim(reason)) between 1 and 300),
-  status     text not null default 'open'
-               check (status in ('open', 'resolved', 'withdrawn')),
-  created_at timestamptz not null default now(),
-  unique (expense_id, raised_by)
-);
-
-create index on entry_disputes (expense_id) where status = 'open';
-
 -- ─────────────────────────────────────────────────────────────
 -- LEDGER ENTRIES  ◀── APPEND ONLY. NEVER UPDATE. NEVER DELETE.
 -- ─────────────────────────────────────────────────────────────
 create table ledger_entries (
   id            uuid primary key default gen_random_uuid(),
   group_id      uuid not null references groups(id) on delete cascade,
-  trip_id       uuid references trips(id) on delete set null,  -- inherited from source
   from_user     uuid not null references profiles(id),  -- owes
   to_user       uuid not null references profiles(id),  -- is owed
   amount_poisha bigint not null check (amount_poisha > 0),
@@ -236,13 +151,7 @@ create table ledger_entries (
 create index on ledger_entries (group_id);
 create index on ledger_entries (group_id, from_user, to_user);
 create index on ledger_entries (source_id);
-create index on ledger_entries (trip_id) where trip_id is not null;
 create index on ledger_entries (group_id, created_at desc);
-
--- NOTE: trip_id is set by the RPC that creates the entry — never by a client.
--- For an expense entry it is copied from expenses.trip_id. For a proposal entry
--- it comes from the proposal payload's optional "trip_id". It is purely a
--- reporting dimension and has NO effect on validation or on netting.
 
 -- Belt and braces: block mutation at the database level, so that even a
 -- future bug or a compromised role cannot rewrite history.
