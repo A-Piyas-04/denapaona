@@ -42,13 +42,13 @@ export function Sheet({ open, onClose, title, children, footer }: {
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal aria-labelledby={id}>
-      <button className="absolute inset-0 animate-fade-in bg-slate-950/45" aria-label="Close" tabIndex={-1} onClick={onClose} />
+      <button className="absolute inset-0 animate-fade-in bg-slate-950/40" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div ref={panel} tabIndex={-1}
-           className="relative flex max-h-[88vh] w-full max-w-app animate-sheet-in flex-col rounded-t-3xl bg-white outline-none sm:rounded-3xl">
+           className="relative flex max-h-[88dvh] w-full max-w-app animate-sheet-in flex-col rounded-t-3xl bg-white shadow-float outline-none sm:rounded-3xl">
         <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-slate-200 sm:hidden" aria-hidden />
         <div className="flex shrink-0 items-center gap-2 px-5 pb-2 pt-3 sm:pt-5">
-          <h2 id={id} className="min-w-0 flex-1 text-lg font-semibold text-slate-900">{title}</h2>
-          <IconButton label="Close" onClick={onClose} className="-mr-2 h-9 w-9 text-slate-500"><X size={20} /></IconButton>
+          <h2 id={id} className="min-w-0 flex-1 font-display text-lg font-semibold text-slate-900">{title}</h2>
+          <IconButton label="Close" onClick={onClose} className="-mr-1 h-10 w-10 text-slate-500"><X size={20} /></IconButton>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-1">{children}</div>
         {footer && (

@@ -18,7 +18,8 @@ import { Inbox } from './routes/Inbox';
 import { ProposalDetail } from './routes/ProposalDetail';
 import { Join } from './routes/Join';
 import { Me } from './routes/Me';
-import { Skeleton } from './components/ui';
+import { AuthSplash } from './components/States';
+import { BrandLockup } from './components/Brand';
 
 /** Routes from DEVELOPMENT_PLAN.md §13.1 (plus expense detail, settings, me). */
 export function App() {
@@ -55,13 +56,7 @@ function Authed({ children }: { children: ReactNode }) {
   const { userId, loading } = useAuth();
   const location = useLocation();
   useRealtimeInbox(userId);
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-app space-y-4 px-4 pt-5" aria-busy>
-        <Skeleton className="h-8 w-32" /><Skeleton className="h-28 w-full rounded-3xl" /><Skeleton className="h-40 w-full rounded-2xl" />
-      </div>
-    );
-  }
+  if (loading) return <AuthSplash message="Opening your ledger…" />;
   if (!userId) {
     rememberReturnTo(location.pathname + location.search);
     return <Navigate to="/" replace state={{ from: location.pathname }} />;
@@ -71,11 +66,15 @@ function Authed({ children }: { children: ReactNode }) {
 
 function NotConfigured() {
   return (
-    <div className="mx-auto max-w-app px-6 pt-14">
-      <h1 className="text-[22px] font-semibold text-slate-900">HishebNama isn’t configured</h1>
+    <div className="app-frame safe-top px-6 pb-10 pt-14">
+      <BrandLockup size="md" />
+      <h1 className="mt-8 text-[22px] font-semibold text-ink">HishebNama isn’t configured</h1>
       <p className="mt-3 text-[15px] leading-relaxed text-slate-600">
-        Copy <code>.env.example</code> to <code>.env.local</code> and set <code>VITE_SUPABASE_URL</code> and{' '}
-        <code>VITE_SUPABASE_ANON_KEY</code>. Never put the service role key in any <code>VITE_</code> variable.
+        Copy <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">.env.example</code> to{' '}
+        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">.env.local</code> and set{' '}
+        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_SUPABASE_URL</code> and{' '}
+        <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_SUPABASE_ANON_KEY</code>. Never put the
+        service role key in any <code className="rounded-md bg-white px-1.5 py-0.5 text-[13px]">VITE_</code> variable.
       </p>
     </div>
   );

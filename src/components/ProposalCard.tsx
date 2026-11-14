@@ -37,7 +37,7 @@ export function ProposalCard({ proposal: p, groupName, name, me, ...rest }: {
   const Icon = type.icon;
   return (
     <Link to={`/proposals/${p.id}`} {...rest}
-          className="block rounded-2xl border border-slate-200/80 bg-white p-4 transition-colors hover:border-slate-300 active:bg-slate-50">
+          className="pressable block rounded-2xl border border-slate-200/60 bg-white p-4 shadow-soft transition-colors hover:border-slate-300 active:bg-slate-50">
       <div className="flex items-start gap-3">
         <IconTile tone="brand"><Icon size={20} /></IconTile>
         <div className="min-w-0 flex-1">

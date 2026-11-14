@@ -6,16 +6,16 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-fg hover:bg-brand-hover disabled:bg-slate-200 disabled:text-slate-500',
+  primary: 'bg-brand text-brand-fg shadow-sm hover:bg-brand-hover disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none',
   secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 disabled:text-slate-400',
   outline: 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 disabled:text-slate-400',
   ghost: 'text-slate-700 hover:bg-slate-100 disabled:text-slate-400',
   danger: 'bg-owe text-white hover:bg-red-800 disabled:bg-slate-200 disabled:text-slate-500',
 };
 const SIZES: Record<Size, string> = {
-  sm: 'h-9 px-3.5 text-sm',
-  md: 'h-11 px-4 text-[15px]',
-  lg: 'h-12 px-5 text-base',
+  sm: 'h-9 min-h-[36px] px-3.5 text-sm',
+  md: 'h-11 min-h-[44px] px-4 text-[15px]',
+  lg: 'h-12 min-h-[48px] px-5 text-base',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -64,8 +64,8 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
       aria-label={label}
       title={label}
       className={cn(
-        'pressable inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-        tone === 'brand' ? 'bg-brand text-white hover:bg-brand-hover' : 'text-slate-700 hover:bg-slate-200/70',
+        'pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
+        tone === 'brand' ? 'bg-brand text-white shadow-sm hover:bg-brand-hover' : 'text-slate-700 hover:bg-white/80',
         className,
       )}
       {...rest}

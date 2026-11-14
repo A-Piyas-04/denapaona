@@ -4,7 +4,7 @@ import { AlertTriangle, ListOrdered } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { DerivationView } from '@/components/DerivationView';
 import { Button, Field, Input, Section, Segmented, Sheet, StatHero, Textarea } from '@/components/ui';
-import { EmptyState, ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
+import { EmptyState, ErrorState, ScreenSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
@@ -44,7 +44,7 @@ export function Explain() {
 
   return (
     <AppShell title={`You and ${other}`} back>
-      {explain.isLoading ? <><HeroSkeleton /><ListSkeleton rows={4} /></> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
+      {explain.isLoading ? <ScreenSkeleton variant="detail" /> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
         <>
           {!explain.data.consistent && (
             // Invariant I6, made visible.  This can only mean an engine bug — never hidden (E-01#2).

@@ -17,12 +17,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] mx-auto flex max-w-app flex-col items-center gap-2 px-4" aria-live="polite">
+      <div
+        className="pointer-events-none fixed inset-x-0 z-[60] mx-auto flex max-w-app flex-col items-center gap-2 px-4"
+        style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+        aria-live="polite"
+      >
         {toasts.map((t) => {
           const Icon = t.tone === 'error' ? AlertCircle : t.tone === 'info' ? Info : CheckCircle2;
           return (
             <div key={t.id} role={t.tone === 'error' ? 'alert' : 'status'}
-                 className={cn('pointer-events-auto flex w-full animate-toast-in items-start gap-2.5 rounded-2xl px-4 py-3 text-[15px] font-medium text-white shadow-float',
+                 className={cn('pointer-events-auto flex w-full animate-toast-in items-start gap-2.5 rounded-2xl px-4 py-3.5 text-[15px] font-medium text-white shadow-float',
                    t.tone === 'error' ? 'bg-owe' : 'bg-slate-900')}>
               <Icon size={19} className={cn('mt-0.5 shrink-0', t.tone === 'ok' && 'text-emerald-300')} aria-hidden />
               <span className="min-w-0 flex-1">{t.text}</span>

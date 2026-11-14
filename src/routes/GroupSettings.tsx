@@ -5,7 +5,7 @@ import { Crown, LogOut, RefreshCw } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Avatar, Badge, Button, IconTile, ListGroup, ListRow, Section, Sheet } from '@/components/ui';
 import { InviteCard } from '@/components/InviteCard';
-import { ListSkeleton } from '@/components/States';
+import { ScreenSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useGroup, useMembers, type Member } from '@/hooks/useGroups';
@@ -60,7 +60,7 @@ export function GroupSettings() {
       )}
 
       <Section title="Members">
-        {members.isLoading ? <ListSkeleton rows={3} /> : (
+        {members.isLoading ? <ScreenSkeleton variant="list" /> : (
           <ListGroup>
             {(members.data ?? []).map((m) => (
               <ListRow key={m.user_id}

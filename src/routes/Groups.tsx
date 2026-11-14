@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link2, Plus, Users } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Avatar, Button, Field, IconButton, Input, ListGroup, ListRow, Section, Sheet } from '@/components/ui';
-import { EmptyState, ListSkeleton, Loadable } from '@/components/States';
+import { EmptyState, Loadable, ScreenSkeleton } from '@/components/States';
 import { Balance, Taka } from '@/components/Money';
 import { useMyGroups, type MyGroup } from '@/hooks/useGroups';
 import { rpc } from '@/lib/rpc';
@@ -23,10 +23,10 @@ export function Groups() {
     <AppShell title={t('groups.title')} action={
       <IconButton label={t('groups.new')} tone="brand" onClick={() => setCreating(true)} data-tour="new-group"><Plus size={22} /></IconButton>
     }>
-      <Loadable query={groups} skeleton={<ListSkeleton rows={3} />}>
+      <Loadable query={groups} skeleton={<ScreenSkeleton variant="list" />}>
         {(list) => list.length === 0 ? (
           <EmptyState icon={Users} title={t('groups.empty.title')} body={t('groups.empty.body')}>
-            <Button block onClick={() => setCreating(true)}>Create a group</Button>
+            <Button block size="lg" onClick={() => setCreating(true)}>Create a group</Button>
             <Button block variant="ghost" onClick={() => navigate('/join')}>{t('groups.haveInvite')}</Button>
           </EmptyState>
         ) : (
@@ -36,14 +36,14 @@ export function Groups() {
               <ListGroup>
                 {list.map((g, i) => (
                   <ListRow key={g.id} to={`/groups/${g.id}`} data-tour={i === 0 ? 'group-row' : undefined}
-                           leading={<Avatar name={g.name} seed={g.id} size={40} square />}
+                           leading={<Avatar name={g.name} seed={g.id} size={44} square />}
                            title={g.name}
                            subtitle={g.netPoisha > 0 ? t('groups.subtitle.get') : g.netPoisha < 0 ? t('groups.subtitle.give') : t('groups.subtitle.none')}
                            trailing={<Balance poisha={g.netPoisha} settledText={t('balance.allSettled')} className="text-[15px]" />} />
                 ))}
               </ListGroup>
             </Section>
-            <Link to="/join" className="inline-flex items-center justify-center gap-2 self-center rounded-xl px-3 py-2 text-[15px] font-semibold text-brand hover:bg-brand-soft/60">
+            <Link to="/join" className="pressable inline-flex items-center justify-center gap-2 self-center rounded-xl px-3 py-2.5 text-[15px] font-semibold text-brand hover:bg-brand-soft/60">
               <Link2 size={18} aria-hidden /> {t('groups.haveInvite')}
             </Link>
           </>
@@ -60,13 +60,13 @@ function Summary({ list }: { list: MyGroup[] }) {
   const owe = list.reduce((s, g) => s + Math.max(0, -g.netPoisha), 0);
   return (
     <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-soft">
-      <div className="px-5 py-4">
-        <p className="text-[14px] font-medium text-slate-500">{t('balance.youAreSupposedToGet')}</p>
-        <Taka poisha={owed} className={cn('mt-1 block font-display text-[24px] font-semibold', owed ? 'text-owed' : 'text-slate-400')} />
+      <div className="px-5 py-5">
+        <p className="text-[13px] font-medium text-slate-500">{t('balance.youAreSupposedToGet')}</p>
+        <Taka poisha={owed} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owed ? 'text-owed' : 'text-slate-400')} />
       </div>
-      <div className="border-l border-slate-100 px-5 py-4">
-        <p className="text-[14px] font-medium text-slate-500">{t('balance.youNeedToGive')}</p>
-        <Taka poisha={owe} className={cn('mt-1 block font-display text-[24px] font-semibold', owe ? 'text-owe' : 'text-slate-400')} />
+      <div className="border-l border-slate-100 px-5 py-5">
+        <p className="text-[13px] font-medium text-slate-500">{t('balance.youNeedToGive')}</p>
+        <Taka poisha={owe} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owe ? 'text-owe' : 'text-slate-400')} />
       </div>
     </div>
   );

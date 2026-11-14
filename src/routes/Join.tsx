@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link2 } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Avatar, Button, Field, Input } from '@/components/ui';
-import { ErrorState, HeroSkeleton } from '@/components/States';
+import { ErrorState, ScreenSkeleton } from '@/components/States';
 import { rpc } from '@/lib/rpc';
 import { errorMessage } from '@/lib/errors';
 
@@ -36,14 +36,14 @@ function JoinPrompt({ code }: { code: string }) {
 
   return (
     <AppShell title="Join a group" back="/groups">
-      {preview.isLoading ? <HeroSkeleton />
+      {preview.isLoading ? <ScreenSkeleton variant="detail" />
         : preview.error ? (
           <>
             <ErrorState error={preview.error} />
             <ManualCodeForm />
           </>
         ) : preview.data && !preview.data.already_member ? (
-          <div className="flex flex-col items-center rounded-3xl border border-slate-200/80 bg-white px-6 py-8 text-center">
+          <div className="flex flex-col items-center rounded-3xl border border-slate-200/60 bg-white px-6 py-10 text-center shadow-soft">
             <Avatar name={preview.data.group_name} seed={preview.data.group_id} size={64} square />
             <h2 className="mt-4 text-[22px] font-semibold text-slate-900">Join {preview.data.group_name}?</h2>
             <p className="mt-1 text-[15px] text-slate-500">{preview.data.member_count} member{preview.data.member_count === 1 ? '' : 's'} so far</p>

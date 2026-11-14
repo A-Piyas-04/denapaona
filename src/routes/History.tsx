@@ -4,7 +4,7 @@ import { AppShell } from '@/components/AppShell';
 import { ExpenseRow } from '@/components/ExpenseRow';
 import { PROPOSAL_TYPE } from '@/components/ProposalCard';
 import { Badge, Button, Chip, IconTile, ListGroup, ListRow, Section, useTabParam } from '@/components/ui';
-import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
+import { EmptyState, ErrorState, ScreenSkeleton } from '@/components/States';
 import { Taka } from '@/components/Money';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
@@ -51,7 +51,7 @@ export function History() {
           <Chip key={id} selected={filter === id} onClick={() => setFilter(id)}>{label}</Chip>
         ))}
       </div>
-      {history.isLoading ? <ListSkeleton rows={5} />
+      {history.isLoading ? <ScreenSkeleton variant="list" />
         : history.error ? <ErrorState error={history.error} onRetry={() => history.refetch()} />
         : items.length === 0 ? <EmptyState icon={HistoryIcon} title="Nothing here yet" body="Every expense, agreement and correction stays here for good." />
         : (

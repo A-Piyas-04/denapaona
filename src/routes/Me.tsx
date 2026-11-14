@@ -32,16 +32,17 @@ export function Me() {
   return (
     <AppShell title={t('nav.me')}>
       {profile.data ? (
-        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/80 bg-white px-5 py-5">
-          <Avatar name={profile.data.display_name} url={profile.data.avatar_url} seed={me} size={56} />
+        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft">
+          <Avatar name={profile.data.display_name} url={profile.data.avatar_url} seed={me} size={60} />
           <div className="min-w-0">
-            <p className="truncate font-display text-[19px] font-semibold text-slate-900">{profile.data.display_name}</p>
-            <p className="truncate text-[14px] text-slate-500">{profile.data.email}</p>
+            <p className="truncate font-display text-[20px] font-semibold text-slate-900">{profile.data.display_name}</p>
+            <p className="mt-0.5 truncate text-[14px] text-slate-500">{profile.data.email}</p>
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/80 bg-white px-5 py-5">
-          <Skeleton className="h-14 w-14 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div>
+        <div className="flex items-center gap-4 rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft" aria-busy>
+          <Skeleton className="h-[60px] w-[60px] rounded-full" />
+          <div className="flex-1 space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div>
         </div>
       )}
 

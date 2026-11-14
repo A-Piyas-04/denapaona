@@ -3,7 +3,11 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/format';
 
 export function Card({ className, children, ...rest }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-2xl border border-slate-200/80 bg-white p-4', className)} {...rest}>{children}</div>;
+  return (
+    <div className={cn('rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft', className)} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 export type Tone = 'slate' | 'brand' | 'owe' | 'owed' | 'amber';
@@ -25,7 +29,15 @@ export function Badge({ tone = 'slate', children, className }: { tone?: Tone; ch
 
 /** A loading placeholder.  Money screens show these, never a transient 0 (A-04#3). */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-lg bg-slate-200/80', className)} aria-hidden />;
+  return (
+    <div
+      className={cn(
+        'rounded-lg bg-gradient-to-r from-slate-200/90 via-slate-100 to-slate-200/90 bg-[length:200%_100%] animate-shimmer',
+        className,
+      )}
+      aria-hidden
+    />
+  );
 }
 
 export function Chip({ selected, onClick, children, className, disabled }: {
@@ -54,7 +66,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col rounded-xl bg-slate-200/60 p-1">
+    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col rounded-xl bg-slate-200/70 p-1">
       {options.map((o) => (
         <button
           key={o.value}
@@ -63,7 +75,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'h-10 rounded-lg text-[15px] font-medium transition-colors',
+            'pressable h-10 rounded-lg text-[15px] font-medium transition-colors',
             value === o.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
           )}
         >

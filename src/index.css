@@ -3,29 +3,49 @@
 @tailwind utilities;
 
 @layer base {
-  html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  html {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
   body {
     @apply bg-canvas font-sans text-[16px] leading-normal text-slate-900 antialiased;
     overflow-x: hidden;
+    overscroll-behavior: none;
     font-feature-settings: 'kern';
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(10, 107, 97, 0.08), transparent 55%),
-      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(15, 122, 74, 0.05), transparent 50%);
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(10, 107, 97, 0.07), transparent 55%),
+      radial-gradient(ellipse 55% 35% at 100% 100%, rgba(15, 122, 74, 0.04), transparent 50%);
     background-attachment: fixed;
   }
   @media (min-width: 640px) {
-    body { background-color: #E2EBE8; }
+    body { background-color: #E4EBE9; }
   }
   h1, h2, h3 { @apply font-display tracking-[-0.015em]; text-wrap: balance; }
   /* Stories §12.5: the focused field scrolls into view above the keyboard. */
   input, textarea { scroll-margin-bottom: 7rem; }
   :focus-visible { outline: 2px solid theme('colors.brand.DEFAULT'); outline-offset: 2px; }
+  /* Native feel: no long-press select on chrome controls. */
+  button, [role="button"], [role="tab"], a.pressable { user-select: none; }
+}
+
+@layer components {
+  .app-frame {
+    @apply mx-auto flex min-h-[100dvh] max-w-app flex-col bg-transparent;
+  }
+  @media (min-width: 640px) {
+    .app-frame {
+      @apply border-x border-slate-200/70 bg-canvas/90 shadow-soft;
+    }
+  }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
 @layer utilities {
   .tnum { font-variant-numeric: tabular-nums; }
   .pressable {
-    transition-property: transform, background-color, border-color, color, box-shadow;
+    transition-property: transform, background-color, border-color, color, box-shadow, opacity;
     transition-duration: 140ms;
     transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
   }
@@ -41,6 +61,7 @@
     transition-duration: 1ms !important;
   }
   .pressable:active:not(:disabled) { transform: none; }
+  .animate-page-enter { opacity: 1 !important; transform: none !important; }
 }
 
 /* Guided tour (driver.js), themed to the app tokens. */

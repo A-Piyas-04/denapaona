@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { takeReturnTo, useAuth } from '@/hooks/useAuth';
-import { Skeleton } from '@/components/ui';
+import { AuthSplash } from '@/components/States';
 
 /**
  * OAuth lands here.  supabase-js picks the session out of the URL; we then
@@ -18,5 +18,5 @@ export function AuthCallback() {
   // getSession() resolves only after supabase-js has processed the URL, so no
   // session at this point means the sign-in was cancelled or failed.
   if (!loading && !userId) return <Navigate to="/" replace />;
-  return <div className="mx-auto max-w-app p-6"><Skeleton className="h-8 w-48" /></div>;
+  return <AuthSplash message="Signing you in…" />;
 }

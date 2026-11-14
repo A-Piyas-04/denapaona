@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { ExpenseForm } from '@/components/ExpenseForm';
-import { Loadable } from '@/components/States';
+import { Loadable, ScreenSkeleton } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useMembers } from '@/hooks/useGroups';
 
@@ -13,7 +13,7 @@ export function AddExpense() {
   const members = useMembers(groupId);
   return (
     <AppShell title="New expense" back={`/groups/${groupId}`} nav={false}>
-      <Loadable query={members}>
+      <Loadable query={members} skeleton={<ScreenSkeleton variant="form" />}>
         {(list) => (
           <ExpenseForm
             groupId={groupId}

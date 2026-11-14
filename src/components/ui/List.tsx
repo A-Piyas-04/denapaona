@@ -59,7 +59,11 @@ export function ListRow({ leading, title, subtitle, trailing, to, onClick, chevr
       {(chevron ?? !!to) && <ChevronRight size={18} className="-mr-1 shrink-0 text-slate-300" aria-hidden />}
     </>
   );
-  const cls = cn('flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left', (to || onClick) && 'transition-colors hover:bg-slate-50 active:bg-slate-100', className);
+  const cls = cn(
+    'flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left',
+    (to || onClick) && 'transition-colors active:bg-slate-100 hover:bg-slate-50/90',
+    className,
+  );
   if (to) return <Link to={to} className={cls} {...rest}>{body}</Link>;
   if (onClick) return <button type="button" onClick={onClick} className={cls} {...rest}>{body}</button>;
   return <div className={cls} {...rest}>{body}</div>;

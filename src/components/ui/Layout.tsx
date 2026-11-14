@@ -10,7 +10,7 @@ export function StatHero({ label, value, sub, action, tone = 'neutral', classNam
 }) {
   return (
     <div className={cn('rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft', className)} {...rest}>
-      <p className={cn('text-[15px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-slate-500')}>{label}</p>
+      <p className={cn('text-[14px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-slate-500')}>{label}</p>
       <div className="mt-1 font-display text-[36px] font-semibold leading-tight tracking-tight text-ink tnum">{value}</div>
       {(sub || action) && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -24,17 +24,17 @@ export function StatHero({ label, value, sub, action, tone = 'neutral', classNam
 
 export interface ActionItem { icon: LucideIcon; label: string; to?: string; onClick?: () => void; 'data-tour'?: string }
 
-/** A row of 2–4 shortcuts, each an icon with a short label. */
+/** A row of 2–4 shortcuts, each an icon with a short label — thumb-friendly. */
 export function ActionBar({ items, className, ...rest }: { items: ActionItem[]; className?: string; 'data-tour'?: string }) {
   return (
     <div className={cn('grid gap-2', items.length === 4 ? 'grid-cols-4' : items.length === 3 ? 'grid-cols-3' : 'grid-cols-2', className)} {...rest}>
       {items.map(({ icon: Icon, label, to, onClick, ...r }) => {
         const inner = (
           <>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-brand transition-colors group-hover:border-brand/40">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200/80 bg-white text-brand shadow-soft transition-colors group-hover:border-brand/35">
               <Icon size={22} strokeWidth={1.9} aria-hidden />
             </span>
-            <span className="text-[13px] font-medium text-slate-700">{label}</span>
+            <span className="text-[12px] font-semibold text-slate-700">{label}</span>
           </>
         );
         const cls = 'group pressable flex flex-col items-center gap-1.5 rounded-2xl py-1';
@@ -61,20 +61,37 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
   value: T; onChange: (v: T) => void; items: { id: T; label: string; count?: number }[]; label: string; className?: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className={cn('flex gap-1 border-b border-slate-200', className)}>
+    <div role="tablist" aria-label={label} className={cn('flex gap-0.5 border-b border-slate-200/90', className)}>
       {items.map((it) => {
         const active = it.id === value;
         return (
-          <button key={it.id} type="button" role="tab" aria-selected={active} onClick={() => onChange(it.id)}
-                  className={cn('relative -mb-px inline-flex h-11 items-center gap-1.5 px-3 text-[15px] font-semibold transition-colors',
-                    active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800')}>
-            {it.label}
-            {it.count !== undefined && it.count > 0 && (
-              <span className={cn('min-w-[20px] rounded-full px-1.5 text-center text-[12px] leading-5',
-                active ? 'bg-brand text-white' : 'bg-slate-200 text-slate-700')}>{it.count}</span>
+          <button
+            key={it.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(it.id)}
+            className={cn(
+              'pressable relative -mb-px inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-3 sm:text-[15px]',
+              active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800',
             )}
-            <span className={cn('absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-brand transition-transform duration-200 ease-out',
-              active ? 'scale-x-100' : 'scale-x-0')} aria-hidden />
+          >
+            <span className="truncate">{it.label}</span>
+            {it.count !== undefined && it.count > 0 && (
+              <span className={cn(
+                'min-w-[20px] rounded-full px-1.5 text-center text-[12px] leading-5',
+                active ? 'bg-brand text-white' : 'bg-slate-200 text-slate-700',
+              )}>
+                {it.count}
+              </span>
+            )}
+            <span
+              className={cn(
+                'absolute inset-x-2 bottom-0 h-0.5 origin-center rounded-full bg-brand transition-transform duration-200 ease-out',
+                active ? 'scale-x-100' : 'scale-x-0',
+              )}
+              aria-hidden
+            />
           </button>
         );
       })}
@@ -82,13 +99,18 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
   );
 }
 
-/** Floating primary action, sitting above the bottom nav. */
+/** Floating primary action, sitting above the bottom nav (thumb zone). */
 export function Fab({ to, label, icon: Icon, ...rest }: { to: string; label: string; icon: LucideIcon; 'data-tour'?: string }) {
   return (
-    <div className="pointer-events-none fixed inset-x-0 z-30 mx-auto flex max-w-app justify-end px-4"
-         style={{ bottom: 'calc(var(--nav-h, 0px) + env(safe-area-inset-bottom) + 16px)' }}>
-      <Link to={to} {...rest}
-            className="pressable pointer-events-auto inline-flex h-14 items-center gap-2 rounded-2xl bg-brand pl-4 pr-5 text-[16px] font-semibold text-white shadow-float hover:bg-brand-hover">
+    <div
+      className="pointer-events-none fixed inset-x-0 z-30 mx-auto flex max-w-app justify-end px-4"
+      style={{ bottom: 'calc(var(--nav-h, 0px) + env(safe-area-inset-bottom) + 16px)' }}
+    >
+      <Link
+        to={to}
+        {...rest}
+        className="pressable pointer-events-auto inline-flex h-14 items-center gap-2 rounded-2xl bg-brand pl-4 pr-5 text-[16px] font-semibold text-white shadow-float hover:bg-brand-hover"
+      >
         <Icon size={22} strokeWidth={2.2} aria-hidden />
         {label}
       </Link>
@@ -121,8 +143,13 @@ export function Banner({ icon: Icon, children, to, tone = 'neutral', action }: {
 /** The primary form action, kept in reach above the keyboard and the nav. */
 export function StickyFooter({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('sticky z-20 -mx-4 mt-auto bg-gradient-to-t from-canvas from-70% to-transparent px-4 pb-3 pt-6', className)}
-         style={{ bottom: 'calc(var(--nav-h, 0px) + env(safe-area-inset-bottom))' }}>
+    <div
+      className={cn(
+        'sticky z-20 -mx-4 mt-auto bg-gradient-to-t from-canvas from-65% via-canvas/95 to-transparent px-4 pb-3 pt-8',
+        className,
+      )}
+      style={{ bottom: 'calc(var(--nav-h, 0px) + env(safe-area-inset-bottom))' }}
+    >
       {children}
     </div>
   );

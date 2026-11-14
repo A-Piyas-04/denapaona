@@ -6,7 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { DebtDiagram, type DebtEdge } from '@/components/DebtDiagram';
 import { ApprovalDots, PROPOSAL_TYPE } from '@/components/ProposalCard';
 import { Avatar, Badge, Button, IconTile, ListGroup, ListRow, Section, Sheet, StickyFooter } from '@/components/ui';
-import { ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
+import { ErrorState, ScreenSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useProposal } from '@/hooks/useProposals';
@@ -41,7 +41,7 @@ export function ProposalDetail() {
   const [confirmReject, setConfirmReject] = useState(false);
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
 
-  if (proposal.isLoading) return <AppShell title="Request" back><HeroSkeleton /><ListSkeleton /></AppShell>;
+  if (proposal.isLoading) return <AppShell title="Request" back><ScreenSkeleton variant="detail" /></AppShell>;
   if (!p) return <AppShell title="Request" back><ErrorState error={proposal.error} /></AppShell>;
 
   const parts = p.proposal_participants ?? [];

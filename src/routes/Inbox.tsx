@@ -1,7 +1,7 @@
 import { CheckCircle2, Send } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { ProposalCard } from '@/components/ProposalCard';
-import { EmptyState, Loadable } from '@/components/States';
+import { EmptyState, Loadable, ScreenSkeleton } from '@/components/States';
 import { Tabs, useTabParam } from '@/components/ui';
 import { useMe } from '@/hooks/useAuth';
 import { useInbox, useSentPending } from '@/hooks/useProposals';
@@ -24,6 +24,7 @@ export function Inbox() {
   const sent = useSentPending();
   const [tab, setTab] = useTabParam('tab', 'for-you', TABS);
   const name = useProfileNames([...idsOf(inbox.data), ...idsOf(sent.data)]);
+  const tabSkeleton = <ScreenSkeleton variant="list" />;
   return (
     <AppShell title={t('inbox.title')}>
       <div>
@@ -32,7 +33,7 @@ export function Inbox() {
           { id: 'sent', label: t('inbox.sent'), count: sent.data?.length },
         ]} />
         {tab === 'for-you' ? (
-          <Loadable query={inbox}>
+          <Loadable query={inbox} skeleton={tabSkeleton}>
             {(list) => list.length === 0
               ? <EmptyState icon={CheckCircle2} title={t('inbox.empty')} body="Requests that need your OK show up here." />
               : (
@@ -45,7 +46,7 @@ export function Inbox() {
               )}
           </Loadable>
         ) : (
-          <Loadable query={sent}>
+          <Loadable query={sent} skeleton={tabSkeleton}>
             {(list) => list.length === 0
               ? <EmptyState icon={Send} title="Nothing waiting on others" body="Requests you send appear here until everyone answers." />
               : (

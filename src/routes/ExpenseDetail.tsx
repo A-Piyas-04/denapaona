@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ban, Calendar, UserRound, Wallet } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Avatar, Badge, Banner, Button, Field, IconTile, ListGroup, ListRow, MoreMenu, Section, Sheet, Textarea } from '@/components/ui';
-import { ErrorState, HeroSkeleton, ListSkeleton } from '@/components/States';
+import { ErrorState, ScreenSkeleton } from '@/components/States';
 import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
@@ -40,7 +40,7 @@ export function ExpenseDetail() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (expense.isLoading) return <AppShell title="Expense" back><HeroSkeleton /><ListSkeleton /></AppShell>;
+  if (expense.isLoading) return <AppShell title="Expense" back><ScreenSkeleton variant="detail" /></AppShell>;
   if (expense.error || !expense.data) return <AppShell title="Expense" back><ErrorState error={expense.error} /></AppShell>;
   const e = expense.data;
   const voided = !!e.voided_at;

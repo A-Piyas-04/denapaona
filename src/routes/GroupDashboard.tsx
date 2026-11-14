@@ -8,7 +8,7 @@ import { InviteCard } from '@/components/InviteCard';
 import {
   Avatar, Badge, Banner, Fab, IconTile, ListGroup, ListRow, MoreMenu, Sheet, Tabs, TextLink, useTabParam,
 } from '@/components/ui';
-import { EmptyState, ErrorState, ListSkeleton } from '@/components/States';
+import { EmptyState, ErrorState, ListSkeleton, ScreenSkeleton } from '@/components/States';
 import { Taka } from '@/components/Money';
 import { useMe } from '@/hooks/useAuth';
 import { useGroup, useMembers, useMyPairwise, useNames } from '@/hooks/useGroups';
@@ -58,6 +58,13 @@ export function GroupDashboard() {
   });
 
   if (group.error) return <AppShell title="Group" back="/groups"><ErrorState error={group.error} onRetry={() => group.refetch()} /></AppShell>;
+  if (group.isLoading && !group.data) {
+    return (
+      <AppShell title=" " back="/groups">
+        <ScreenSkeleton variant="dashboard" />
+      </AppShell>
+    );
+  }
 
   const waitingOnMe = (pending.data ?? []).filter((p) =>
     p.proposal_participants?.some((pp) => pp.user_id === me && pp.decision === 'pending'));
@@ -95,12 +102,17 @@ export function GroupDashboard() {
       )}
 
       {pairs && pairs.length > 0 && (
-        <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-brand-soft/40 px-4 py-3" data-tour="balance-summary">
+        <div
+          className="rounded-3xl border border-slate-200/60 bg-white px-5 py-5 shadow-soft"
+          data-tour="balance-summary"
+        >
           <p className="text-[13px] font-medium text-slate-500">
             {net > 0 ? t('balance.youAreSupposedToGet') : net < 0 ? t('balance.youNeedToGive') : t('balance.allSettled')}
           </p>
-          <p className={cn('mt-0.5 font-display text-[28px] font-semibold tracking-tight tnum',
-            net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-slate-400')}>
+          <p className={cn(
+            'mt-1 font-display text-[34px] font-semibold leading-none tracking-tight tnum',
+            net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-slate-400',
+          )}>
             {net === 0 ? '—' : <Taka poisha={Math.abs(net)} />}
           </p>
         </div>

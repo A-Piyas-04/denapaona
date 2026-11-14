@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { SettleSuggestions } from '@/components/SettleSuggestions';
 import { InfoSheet } from '@/components/ui';
-import { Loadable } from '@/components/States';
+import { Loadable, ScreenSkeleton } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useGroupNets, useNames } from '@/hooks/useGroups';
 import { useRealtimeGroup } from '@/hooks/useRealtimeProposals';
@@ -23,7 +23,7 @@ export function Settle() {
         <p>Pay however you like, in cash or by bKash or Nagad. Then mark it as paid here. The other person confirms before it counts.</p>
       </InfoSheet>
     }>
-      <Loadable query={nets}>
+      <Loadable query={nets} skeleton={<ScreenSkeleton variant="list" />}>
         {(rows) => (
           <SettleSuggestions groupId={groupId} me={me} name={(id) => name(id)}
                              nets={new Map(rows.map((r) => [r.user_id, r.net_poisha]))} />

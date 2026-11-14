@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { TransferBuilder } from '@/components/TransferBuilder';
 import { InfoSheet } from '@/components/ui';
-import { ListSkeleton, ErrorState } from '@/components/States';
+import { ErrorState, ScreenSkeleton } from '@/components/States';
 import { useMe } from '@/hooks/useAuth';
 import { useMembers } from '@/hooks/useGroups';
 import { useAllPairs } from '@/hooks/usePairs';
@@ -24,7 +24,7 @@ export function Transfer() {
       </InfoSheet>
     }>
       <p className="-mb-2 px-1 text-[15px] text-slate-600">One payment can clear two debts. Both people must agree.</p>
-      {err ? <ErrorState error={err} /> : !members.data || !pairs.data ? <ListSkeleton /> : (
+      {err ? <ErrorState error={err} /> : !members.data || !pairs.data ? <ScreenSkeleton variant="form" /> : (
         <TransferBuilder groupId={groupId} me={me} owes={pairs.data.owes}
           people={members.data.map((m) => ({ id: m.user_id, name: m.profile.display_name }))} />
       )}
