@@ -12,7 +12,7 @@ export function AuthSplash({ message = 'Loading…' }: { message?: string }) {
       <div className="mt-10 h-1 w-28 overflow-hidden rounded-full bg-brand-muted">
         <div className="h-full w-1/2 animate-indeterminate rounded-full bg-brand" />
       </div>
-      <p className="mt-4 text-[14px] font-medium text-cream/50">{message}</p>
+      <p className="mt-4 text-[14px] font-medium text-ink-soft">{message}</p>
     </div>
   );
 }
@@ -65,8 +65,8 @@ export function EmptyState({ title, body, children, icon: Icon }: {
           <Icon size={26} strokeWidth={1.8} />
         </span>
       )}
-      <p className="font-display text-[17px] font-semibold text-paper">{title}</p>
-      {body && <p className="mx-auto mt-1.5 max-w-[17rem] text-[15px] leading-relaxed text-cream/55">{body}</p>}
+      <p className="font-display text-[17px] font-semibold text-ink">{title}</p>
+      {body && <p className="mx-auto mt-1.5 max-w-[17rem] text-[15px] leading-relaxed text-ink-soft">{body}</p>}
       {children && <div className="mt-6 flex w-full max-w-[16rem] flex-col gap-2">{children}</div>}
     </div>
   );
@@ -124,7 +124,7 @@ export function Loadable<T>({ query, children, skeleton }: {
 
 export function InlineLoader({ className, label = 'Updating…' }: { className?: string; label?: string }) {
   return (
-    <div className={cn('flex items-center justify-center gap-2 py-6 text-[13px] font-medium text-cream/50', className)} role="status" aria-live="polite">
+    <div className={cn('flex items-center justify-center gap-2 py-6 text-[13px] font-medium text-ink-soft', className)} role="status" aria-live="polite">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" aria-hidden />
       {label}
     </div>

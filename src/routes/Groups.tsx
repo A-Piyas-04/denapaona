@@ -59,12 +59,12 @@ function Summary({ list }: { list: MyGroup[] }) {
   const owed = list.reduce((s, g) => s + Math.max(0, g.netPoisha), 0);
   const owe = list.reduce((s, g) => s + Math.max(0, -g.netPoisha), 0);
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-paper-muted/40 bg-paper text-ink shadow-soft">
+    <div className="grid grid-cols-2 overflow-hidden rounded-3xl border border-night-line/70 bg-paper text-ink shadow-soft">
       <div className="px-5 py-5">
         <p className="text-[13px] font-medium text-ink-soft">{t('balance.youAreSupposedToGet')}</p>
         <Taka poisha={owed} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owed ? 'text-owed' : 'text-ink-soft/40')} />
       </div>
-      <div className="border-l border-paper-muted px-5 py-5">
+      <div className="border-l border-night-line/70 px-5 py-5">
         <p className="text-[13px] font-medium text-ink-soft">{t('balance.youNeedToGive')}</p>
         <Taka poisha={owe} className={cn('mt-1.5 block font-display text-[26px] font-semibold tracking-tight tnum', owe ? 'text-owe' : 'text-ink-soft/40')} />
       </div>

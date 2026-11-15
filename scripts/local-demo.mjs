@@ -29,7 +29,7 @@ const GATEWAY_PORT = 54341;
 const APP_PORT = Number(process.env.PORT) || 5173;
 const SECRET = 'local-demo-jwt-secret-at-least-32-characters-long';
 // Bump when scripts/demo-seed.sql changes, so an older demo database says so.
-const SEED_VERSION = 3;
+const SEED_VERSION = 5;
 const reset = process.argv.includes('--reset');
 const native = process.argv.includes('--native');
 
@@ -42,14 +42,14 @@ const EXE = WIN ? '.exe' : '';
 
 // What each demo user is good for trying.  Shown on the sign-in page and in DEMO.md.
 const ROLES = {
-  Arif: 'Owner of Hall 3 Friends. Has a payment to confirm.',
-  Sami: 'Owner of Badminton Club. Sent a transfer; has a cancellation to approve.',
-  Rafi: 'Has a transfer and a cancellation to approve.',
-  Nadia: 'Owner of Flat 4B. Has a payment to confirm.',
-  Imran: 'Owner of Office Lunch. Has a payment to confirm and a request to approve.',
-  Mitu: 'In three groups. Sent a payment; has a cancellation to approve.',
-  Joya: 'Has a correction waiting for her approval.',
-  Tania: 'In no group yet. Try the empty state and joining with an invite link.',
+  Arif: 'Home shows global balances (incl. Joya’s ৳500 claim). Hall 3 owner + Cox’s tour. Payment to confirm.',
+  Sami: 'Sent a Home claim to Imran. Badminton + Bandarban owner; Cox’s tour leader.',
+  Rafi: 'In both demo tours. Has a transfer and a cancellation to approve.',
+  Nadia: 'Owner of Flat 4B. On Cox’s Bazar Tour. Has a payment to confirm.',
+  Imran: 'Has a pending Home claim from Sami. Office Lunch owner + Cox’s tour.',
+  Mitu: 'In three groups and both demo tours. Sent a payment; has a cancellation to approve.',
+  Joya: 'Recorded a global claim vs Arif (approved). Has a correction waiting. No tours.',
+  Tania: 'Empty Home. Join Cox’s with PIN 11223344, or record a balance invite.',
 };
 
 function docker(args, { input, quiet = false, allowFail = false } = {}) {
@@ -345,6 +345,12 @@ vite.stdout.on('data', (d) => {
     const people = users();
     const codes = lines(psql(`select name || '|' || invite_code from public.groups order by name`).stdout)
       .map((l) => l.split('|'));
+    const tourPins = lines(psql(`
+      select case when to_regclass('public.tours') is null then ''
+                  else (select string_agg(name || '|' || join_code, E'\\n' order by name) from public.tours)
+             end`).stdout)
+      .filter(Boolean)
+      .map((l) => l.split('|'));
     const resetCmd = native ? 'npm run dev:local:reset' : 'npm run demo:reset';
     const w = Math.max(...people.map((u) => u.name.length));
     console.log(`
@@ -357,6 +363,9 @@ ${people.map((u) => `     ${u.name.padEnd(w)}  ${u.email.padEnd(w + 12)}  ${u.gr
 
    Invite links (for Tania, or anyone)
 ${codes.map(([n, c]) => `     ${n.padEnd(16)}  http://localhost:${APP_PORT}/join/${c}`).join('\n')}
+
+   Tour PINs (Tours tab — Tania can join Cox’s with 11223344)
+${tourPins.length ? tourPins.map(([n, c]) => `     ${n.padEnd(22)}  ${c}`).join('\n') : '     (no tours — run a reset after applying the tour migration)'}
 
    Data is kept between runs; \`${resetCmd}\` starts over.  Ctrl+C to stop.
 ${seedCurrent ? '' : `\n   ⚠ This demo database has older demo data. Run \`${resetCmd}\` for the full set.\n`}`);

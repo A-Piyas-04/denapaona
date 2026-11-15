@@ -2,28 +2,93 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Semantic color tokens. Every surface in a theme stays in the same family —
+  no cream cards on a night canvas.
+*/
+:root,
+html.light {
+  color-scheme: light;
+  --canvas: 247 242 232;
+  --night: 255 252 246;
+  --night-elev: 240 233 220;
+  --night-line: 220 210 192;
+  --paper: 255 252 246;
+  --paper-muted: 240 233 220;
+  --ink: 26 21 16;
+  --ink-soft: 92 83 72;
+  --cream: 92 83 72;
+  --brand: 212 148 16;
+  --brand-hover: 186 128 10;
+  --brand-fg: 26 21 16;
+  --brand-soft: 255 236 186;
+  --brand-ink: 122 84 8;
+  --brand-muted: 255 236 186;
+  --owe: 201 58 36;
+  --owe-soft: 252 232 226;
+  --owed: 31 122 74;
+  --owed-soft: 226 244 234;
+  --pending: 168 110 18;
+  --pending-soft: 248 236 208;
+  --shadow-float: 0 14px 36px -14px rgba(26, 21, 16, 0.18), 0 0 0 1px rgba(26, 21, 16, 0.06);
+  --shadow-nav: 0 -1px 0 rgba(26, 21, 16, 0.08), 0 -10px 28px -18px rgba(26, 21, 16, 0.16);
+  --shadow-soft: 0 1px 2px rgba(26, 21, 16, 0.05), 0 8px 20px -10px rgba(26, 21, 16, 0.1);
+  --shadow-header: 0 1px 0 rgba(26, 21, 16, 0.08);
+  --shadow-gold: 0 8px 22px -8px rgba(212, 148, 16, 0.35);
+  --glow-brand: rgba(212, 148, 16, 0.12);
+  --glow-owe: rgba(201, 58, 36, 0.06);
+  --glow-owed: rgba(31, 122, 74, 0.06);
+}
+
+html.dark {
+  color-scheme: dark;
+  --canvas: 18 16 14;
+  --night: 28 24 20;
+  --night-elev: 38 33 28;
+  --night-line: 58 52 44;
+  --paper: 28 24 20;
+  --paper-muted: 38 33 28;
+  --ink: 243 230 200;
+  --ink-soft: 176 160 132;
+  --cream: 243 230 200;
+  --brand: 240 180 41;
+  --brand-hover: 223 160 16;
+  --brand-fg: 26 21 16;
+  --brand-soft: 58 48 24;
+  --brand-ink: 240 180 41;
+  --brand-muted: 58 48 24;
+  --owe: 232 110 88;
+  --owe-soft: 58 32 28;
+  --owed: 88 186 130;
+  --owed-soft: 28 48 38;
+  --pending: 232 180 74;
+  --pending-soft: 58 46 24;
+  --shadow-float: 0 14px 36px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(240, 180, 41, 0.1);
+  --shadow-nav: 0 -1px 0 rgba(255, 248, 238, 0.06), 0 -12px 32px -16px rgba(0, 0, 0, 0.55);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 24px -10px rgba(0, 0, 0, 0.35);
+  --shadow-header: 0 1px 0 rgba(255, 248, 238, 0.06);
+  --shadow-gold: 0 8px 24px -8px rgba(240, 180, 41, 0.4);
+  --glow-brand: rgba(240, 180, 41, 0.14);
+  --glow-owe: rgba(217, 75, 50, 0.08);
+  --glow-owed: rgba(47, 143, 91, 0.07);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior: none;
-    color-scheme: dark;
   }
   body {
-    @apply font-sans text-[16px] leading-normal antialiased;
-    background-color: #12100E;
-    color: #F3E6C8;
+    @apply bg-canvas font-sans text-[16px] leading-normal text-ink antialiased;
     overflow-x: hidden;
     overscroll-behavior: none;
     font-feature-settings: 'kern';
     background-image:
-      radial-gradient(ellipse 90% 55% at 50% -15%, rgba(240, 180, 41, 0.14), transparent 55%),
-      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(217, 75, 50, 0.08), transparent 50%),
-      radial-gradient(ellipse 45% 35% at 0% 80%, rgba(47, 143, 91, 0.07), transparent 45%);
+      radial-gradient(ellipse 90% 55% at 50% -15%, var(--glow-brand), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, var(--glow-owe), transparent 50%),
+      radial-gradient(ellipse 45% 35% at 0% 80%, var(--glow-owed), transparent 45%);
     background-attachment: fixed;
-  }
-  @media (min-width: 640px) {
-    body { background-color: #0A0908; }
   }
   h1, h2, h3 {
     @apply font-display;
@@ -32,7 +97,7 @@
   }
   input, textarea { scroll-margin-bottom: 7rem; }
   :focus-visible {
-    outline: 2px solid #F0B429;
+    outline: 2px solid rgb(var(--brand));
     outline-offset: 2px;
   }
   button, [role="button"], [role="tab"], a.pressable { user-select: none; }
@@ -40,14 +105,11 @@
 
 @layer components {
   .app-frame {
-    @apply mx-auto flex min-h-[100dvh] max-w-app flex-col;
-    background-color: #12100E;
+    @apply mx-auto flex min-h-[100dvh] max-w-app flex-col bg-canvas;
   }
   @media (min-width: 640px) {
     .app-frame {
-      @apply shadow-float;
-      border-left: 1px solid rgba(58, 52, 44, 0.8);
-      border-right: 1px solid rgba(58, 52, 44, 0.8);
+      @apply border-x border-night-line/80 shadow-float;
     }
   }
   .safe-top { padding-top: env(safe-area-inset-top); }
@@ -76,59 +138,32 @@
   .animate-page-enter { opacity: 1 !important; transform: none !important; }
 }
 
-/* Guided tour */
+/* Guided tour — follows active theme tokens */
 .driver-popover.hn-tour {
-  max-width: 19rem;
-  border-radius: 1rem;
-  border: 1px solid #3A342C;
-  background: #1C1814;
-  padding: 1.25rem;
-  color: #F3E6C8;
-  box-shadow: 0 14px 36px -12px rgba(0, 0, 0, 0.55);
-  font-family: Figtree, "Hind Siliguri", system-ui, sans-serif;
+  @apply max-w-[19rem] rounded-2xl border border-night-line bg-night p-5 font-sans text-ink shadow-float;
 }
 .driver-popover.hn-tour .driver-popover-title {
-  font-family: "Hind Siliguri", Figtree, system-ui, sans-serif;
-  font-size: 17px;
-  font-weight: 600;
-  color: #FFF8EE;
+  @apply font-display text-[17px] font-semibold leading-snug text-ink;
 }
 .driver-popover.hn-tour .driver-popover-description {
-  margin-top: 0.375rem;
-  font-size: 15px;
-  line-height: 1.625;
-  color: rgba(243, 230, 200, 0.7);
+  @apply mt-1.5 text-[15px] leading-relaxed text-ink-soft;
 }
-.driver-popover.hn-tour .driver-popover-progress-text { font-size: 13px; color: rgba(243, 230, 200, 0.5); }
-.driver-popover.hn-tour .driver-popover-footer { margin-top: 1rem; align-items: center; gap: 0.5rem; }
-.driver-popover.hn-tour .driver-popover-navigation-btns { gap: 0.5rem; }
+.driver-popover.hn-tour .driver-popover-progress-text { @apply text-[13px] text-ink-soft/70; }
+.driver-popover.hn-tour .driver-popover-footer { @apply mt-4 items-center gap-2; }
+.driver-popover.hn-tour .driver-popover-navigation-btns { @apply gap-2; }
 .driver-popover.hn-tour .driver-popover-footer button {
-  height: 2.25rem;
-  border-radius: 0.75rem;
-  border: 0;
-  padding: 0 0.875rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+  @apply pressable h-9 rounded-xl border-0 px-3.5 font-sans text-sm font-semibold;
   text-shadow: none;
 }
-.driver-popover.hn-tour .driver-popover-next-btn { background: #F0B429; color: #1A1510; }
-.driver-popover.hn-tour .driver-popover-prev-btn { background: #26211C; color: #F3E6C8; }
+.driver-popover.hn-tour .driver-popover-next-btn { @apply bg-brand text-brand-fg; }
+.driver-popover.hn-tour .driver-popover-prev-btn { @apply bg-night-elev text-ink; }
 .driver-popover.hn-tour .driver-popover-close-btn {
-  right: 0.5rem;
-  top: 0.5rem;
-  display: flex;
-  height: 2rem;
-  width: 2rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  font-size: 1.125rem;
-  color: rgba(243, 230, 200, 0.4);
+  @apply right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-lg text-ink-soft;
 }
-.driver-popover.hn-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #1C1814; }
-.driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #1C1814; }
-.driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #1C1814; }
-.driver-popover.hn-tour .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: #1C1814; }
-.hn-tour-progress { margin-bottom: 0.25rem; font-size: 12px; font-weight: 600; color: #F0B429; }
-.hn-tour-skip { margin-right: auto; font-size: 0.875rem; font-weight: 500; color: rgba(243, 230, 200, 0.5); }
-.hn-tour-hint { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.375rem; font-size: 13px; font-weight: 500; color: #F0B429; }
+.driver-popover.hn-tour .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: rgb(var(--night)); }
+.driver-popover.hn-tour .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: rgb(var(--night)); }
+.driver-popover.hn-tour .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: rgb(var(--night)); }
+.driver-popover.hn-tour .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: rgb(var(--night)); }
+.hn-tour-progress { @apply mb-1 text-[12px] font-semibold text-brand; }
+.hn-tour-skip { @apply mr-auto text-sm font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline; }
+.hn-tour-hint { @apply mt-2 flex items-center gap-1.5 text-[13px] font-medium text-brand; }

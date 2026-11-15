@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeftRight, Ban, Clock, HandCoins, PencilLine, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, Ban, Clock, HandCoins, PencilLine, Scale, type LucideIcon } from 'lucide-react';
 import { IconTile } from './ui';
 import { describeProposal } from '@/lib/describe';
 import { timeLeft, cn } from '@/lib/format';
@@ -10,6 +10,7 @@ export const PROPOSAL_TYPE: Record<Proposal['type'], { label: string; icon: Luci
   settlement: { label: 'Payment', icon: HandCoins },
   amendment: { label: 'Correction', icon: PencilLine },
   void: { label: 'Cancellation', icon: Ban },
+  claim: { label: 'Balance', icon: Scale },
 };
 
 /** Approval progress as dots: filled for each person who agreed. */
@@ -37,7 +38,7 @@ export function ProposalCard({ proposal: p, groupName, name, me, ...rest }: {
   const Icon = type.icon;
   return (
     <Link to={`/proposals/${p.id}`} {...rest}
-          className="pressable block rounded-2xl border border-paper-muted/40 bg-paper p-4 text-ink shadow-soft transition-colors hover:border-brand/30 active:bg-paper-muted/50">
+          className="pressable block rounded-2xl border border-night-line/70 bg-paper p-4 text-ink shadow-soft transition-colors hover:border-brand/40 active:bg-night-elev">
       <div className="flex items-start gap-3">
         <IconTile tone="brand"><Icon size={20} /></IconTile>
         <div className="min-w-0 flex-1">

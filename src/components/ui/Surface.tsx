@@ -4,7 +4,7 @@ import { cn } from '@/lib/format';
 
 export function Card({ className, children, ...rest }: { className?: string; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('rounded-2xl border border-paper-muted/50 bg-paper p-4 text-ink shadow-soft', className)} {...rest}>
+    <div className={cn('rounded-2xl border border-night-line/70 bg-paper p-4 text-ink shadow-soft', className)} {...rest}>
       {children}
     </div>
   );
@@ -77,7 +77,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           onClick={() => onChange(o.value)}
           className={cn(
             'pressable h-10 rounded-lg text-[15px] font-medium transition-colors',
-            value === o.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-cream/55 hover:text-cream',
+            value === o.value ? 'bg-brand text-brand-fg shadow-sm' : 'text-ink-soft hover:text-ink',
           )}
         >
           {o.label}

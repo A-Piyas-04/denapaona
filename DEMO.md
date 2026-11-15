@@ -48,25 +48,29 @@ The terminal also prints the invite link for each group, which is handy for tryi
 
 ## Who to sign in as
 
-| User | Sign-in email | Groups | Good for trying |
-|---|---|---|---|
-| Arif | arif@test.local | Hall 3 Friends, Flat 4B, Office Lunch | Owner of Hall 3 Friends. Has a payment to confirm. |
-| Sami | sami@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Owner of Badminton Club. Sent a transfer; has a cancellation to approve. |
-| Rafi | rafi@test.local | Hall 3 Friends, Badminton Club | Has a transfer and a cancellation to approve. |
-| Nadia | nadia@test.local | Hall 3 Friends, Flat 4B | Owner of Flat 4B. Has a payment to confirm. |
-| Imran | imran@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Owner of Office Lunch. Has requests to approve. |
-| Mitu | mitu@test.local | Flat 4B, Office Lunch, Badminton Club | Sent a payment. Has a cancellation to approve. |
-| Joya | joya@test.local | Flat 4B, Office Lunch | Has a correction waiting for her approval. |
-| Tania | tania@test.local | none | The empty state, creating a group, and joining with an invite link. |
+| User | Sign-in email | Groups | Tours | Good for trying |
+|---|---|---|---|---|
+| Arif | arif@test.local | Hall 3 Friends, Flat 4B, Office Lunch | Cox’s Bazar (owner) | Owner of Hall 3 Friends. Confirm a payment. Manage tour expenses. |
+| Sami | sami@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Cox’s (leader), Bandarban (owner) | Badminton owner; tour leader on Cox’s; Bandarban owner. |
+| Rafi | rafi@test.local | Hall 3 Friends, Badminton Club | Both tours | Transfer + cancellation to approve; tour balances. |
+| Nadia | nadia@test.local | Hall 3 Friends, Flat 4B | Cox’s Bazar | Flat 4B owner; payment to confirm; tour member. |
+| Imran | imran@test.local | Hall 3 Friends, Office Lunch, Badminton Club | Cox’s Bazar | Office Lunch owner; inbox + tour balances. |
+| Mitu | mitu@test.local | Flat 4B, Office Lunch, Badminton Club | Both tours | Payment sent; cancellation to approve; tour member. |
+| Joya | joya@test.local | Flat 4B, Office Lunch | none | Correction waiting; create/join a tour from empty. |
+| Tania | tania@test.local | none | none | Empty states. Join Cox’s with PIN **11223344**, or join a group via invite link. |
 
 ## What's in the data
 
-- **4 groups:** Hall 3 Friends, Flat 4B, Office Lunch and Badminton Club.
+- **Home (global ledger):** pairwise balances across all outing expenses **and** consent-based claims. Sign in as Arif to see Joya’s approved ৳500 claim mixed with group debts. Imran has a pending claim from Sami in Inbox.
+- **4 outing groups:** Hall 3 Friends, Flat 4B, Office Lunch and Badminton Club (expenses still write the global ledger).
 - **About 40 expenses** over the last five weeks. Most are split equally; some are entered item by item. One duplicate was cancelled by agreement.
 - **Requests in every state:**
   - Approved, declined and withdrawn ones in the history.
-  - Six waiting right now: payments, a transfer, a correction and a cancellation.
-- **The guided tour** starts the first time each user opens the app in a browser. Replay it from **Me → Replay app tour**.
+  - Waiting now: payments, a transfer, a correction, a cancellation, plus Sami→Imran Home claim.
+- **2 tours** (Tours tab — **separate**; never affect Home):
+  - **Cox’s Bazar Tour** — PIN `11223344`. Arif owns it; Sami is a secondary leader. Six members, equal-split and individual-bill expenses.
+  - **Bandarban Weekend** — PIN `99887766`. Sami owns it with Rafi and Mitu.
+- **The guided product tour** starts the first time each user opens the app. Replay from **Me → Replay app tour**.
 
 ## Good to know
 

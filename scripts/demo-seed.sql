@@ -38,6 +38,12 @@ begin
   update public.proposals             set created_at   = created_at - p, expires_at = expires_at - p,
                                           resolved_at  = resolved_at - p;
   update public.proposal_participants set decided_at   = decided_at - p;
+  -- Tour side-feature (isolated tables; only present after 20261025000800).
+  if to_regclass('public.tours') is not null then
+    update public.tours               set created_at   = created_at - p;
+    update public.tour_members        set joined_at    = joined_at - p;
+    update public.tour_expenses       set created_at   = created_at - p;
+  end if;
 end $$;
 
 create function demo.new_group(p_key text, p_owner text, p_name text, p_members text[]) returns void
@@ -312,6 +318,188 @@ select public.propose_amendment(demo.id('flat'), demo.u('Joya'), demo.u('Nadia')
 select demo.ago('20 minutes');
 select demo.settle('hall3', 'Nadia', 'Nadia', 'Arif', 0.5, 'Half now, rest after payday'); -- Arif
 select demo.ago('15 minutes');
+
+-- ── global claim (Home ledger, no group) ────────────────────────────────
+-- Joya records that Arif owes her ৳500; Arif approves → appears on Home.
+select demo.act('Joya');
+select demo.keep('claim1', public.propose_claim(demo.u('Arif'), 'get', 50000, 'Tea money from last week'));
+select demo.ago('10 minutes');
+select demo.respond(demo.id('claim1'), 'Arif', true);
+select demo.ago('5 minutes');
+
+-- Pending claim for Inbox: Sami says Imran owes him ৳200.
+select demo.act('Sami');
+select public.propose_claim(demo.u('Imran'), 'get', 20000, 'Shared rickshaw');
+select demo.ago('2 minutes');
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Tour side-feature demo (isolated from the group ledger)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+create function demo.new_tour(p_key text, p_owner text, p_name text, p_pin text, p_members text[])
+returns void
+language plpgsql as $$
+declare tid uuid; m text;
+begin
+  perform demo.act(p_owner);
+  tid := public.tour_create(p_name, p_pin);
+  perform demo.keep(p_key, tid);
+  foreach m in array p_members loop
+    perform demo.act(m);
+    perform public.tour_join(p_pin);
+  end loop;
+end $$;
+
+-- Equal-split tour expense. Amounts in taka (converted to paisa).
+create function demo.tour_spend(
+  p_tour text, p_actor text, p_title text, p_taka numeric,
+  p_participants text[], p_payers jsonb
+) returns uuid
+language plpgsql as $$
+declare
+  total bigint := round(p_taka * 100);
+  parts uuid[];
+  contrib jsonb := '[]';
+  k text; v numeric;
+begin
+  select array_agg(demo.u(x) order by ordinality)
+    into parts
+    from unnest(p_participants) with ordinality as t(x, ordinality);
+  for k, v in select key, value::numeric from jsonb_each_text(p_payers) loop
+    contrib := contrib || jsonb_build_object(
+      'user_id', demo.u(k),
+      'amount_paisa', round(v * 100)
+    );
+  end loop;
+  perform demo.act(p_actor);
+  return public.tour_add_expense(
+    demo.id(p_tour), p_title, total, parts, contrib, 'equal', null
+  );
+end $$;
+
+-- Individual-bills tour expense. p_bills and p_payers are {"Name": taka, ...}.
+create function demo.tour_spend_bills(
+  p_tour text, p_actor text, p_title text,
+  p_bills jsonb, p_payers jsonb
+) returns uuid
+language plpgsql as $$
+declare
+  total bigint := 0;
+  parts uuid[] := '{}';
+  shares jsonb := '[]';
+  contrib jsonb := '[]';
+  k text; v numeric;
+begin
+  for k, v in select key, value::numeric from jsonb_each_text(p_bills) loop
+    parts := array_append(parts, demo.u(k));
+    shares := shares || jsonb_build_object(
+      'user_id', demo.u(k),
+      'amount_paisa', round(v * 100)
+    );
+    total := total + round(v * 100);
+  end loop;
+  for k, v in select key, value::numeric from jsonb_each_text(p_payers) loop
+    contrib := contrib || jsonb_build_object(
+      'user_id', demo.u(k),
+      'amount_paisa', round(v * 100)
+    );
+  end loop;
+  perform demo.act(p_actor);
+  return public.tour_add_expense(
+    demo.id(p_tour), p_title, total, parts, contrib, 'individual', shares
+  );
+end $$;
+
+-- Cox's Bazar crew tour — use PIN 11223344 as Tania to join.
+select demo.new_tour(
+  'cox',
+  'Arif',
+  'Cox''s Bazar Tour',
+  '11223344',
+  array['Sami', 'Rafi', 'Nadia', 'Imran', 'Mitu']
+);
+select demo.ago('2 hours');
+
+-- Arif makes Sami a secondary leader.
+select demo.act('Arif');
+select public.tour_set_leader_role(demo.id('cox'), demo.u('Sami'), true);
+select demo.ago('1 hour');
+
+-- Blueprint-style equal split: breakfast for six, Arif pays all.
+select demo.tour_spend(
+  'cox', 'Arif', 'Breakfast at hotel', 1200,
+  array['Arif', 'Sami', 'Rafi', 'Nadia', 'Imran', 'Mitu'],
+  '{"Arif": 1200}'
+);
+select demo.ago('3 hours');
+
+-- Subset: auto for four; Sami pays — pairwise cancels against breakfast.
+select demo.tour_spend(
+  'cox', 'Sami', 'Auto to beach', 80,
+  array['Arif', 'Sami', 'Rafi', 'Nadia'],
+  '{"Sami": 80}'
+);
+select demo.ago('4 hours');
+
+-- Multi-payer equal split (leader records; anyone may appear as payer).
+select demo.tour_spend(
+  'cox', 'Arif', 'Seafood dinner', 3200,
+  array['Arif', 'Sami', 'Rafi', 'Nadia', 'Imran', 'Mitu'],
+  '{"Rafi": 2000, "Nadia": 1200}'
+);
+select demo.ago('6 hours');
+
+-- Individual bills (each person’s own order).
+select demo.tour_spend_bills(
+  'cox', 'Sami', 'Café drinks',
+  '{"Arif": 180, "Sami": 220, "Rafi": 150, "Nadia": 200}',
+  '{"Sami": 750}'
+);
+select demo.ago('5 hours');
+
+select demo.tour_spend(
+  'cox', 'Sami', 'Jet ski (3 of us)', 2700,
+  array['Imran', 'Sami', 'Rafi'],
+  '{"Imran": 2700}'
+);
+select demo.ago('8 hours');
+
+select demo.tour_spend(
+  'cox', 'Arif', 'Hotel Sea View, 2 nights', 9600,
+  array['Arif', 'Sami', 'Rafi', 'Nadia', 'Imran', 'Mitu'],
+  '{"Arif": 4800, "Imran": 4800}'
+);
+select demo.ago('1 day');
+
+-- Smaller second tour so Badminton folks have something quieter.
+select demo.new_tour(
+  'bandarban',
+  'Sami',
+  'Bandarban Weekend',
+  '99887766',
+  array['Rafi', 'Mitu']
+);
+select demo.ago('3 hours');
+
+select demo.tour_spend(
+  'bandarban', 'Sami', 'CNG to Nilgiri', 1800,
+  array['Sami', 'Rafi', 'Mitu'],
+  '{"Sami": 1800}'
+);
+select demo.ago('5 hours');
+
+select demo.tour_spend(
+  'bandarban', 'Sami', 'Cabin booking', 4500,
+  array['Sami', 'Rafi', 'Mitu'],
+  '{"Rafi": 4500}'
+);
+select demo.ago('4 hours');
+
+select demo.tour_spend_bills(
+  'bandarban', 'Sami', 'Trail snacks',
+  '{"Sami": 120, "Rafi": 90, "Mitu": 150}',
+  '{"Mitu": 360}'
+);
 
 select t.login(null);
 

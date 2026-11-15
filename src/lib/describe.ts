@@ -1,5 +1,7 @@
 import { formatTaka } from './money';
-import type { AmendmentPayload, Proposal, SettlementPayload, TransferPayload, VoidPayload } from './types';
+import type {
+  AmendmentPayload, ClaimPayload, Proposal, SettlementPayload, TransferPayload, VoidPayload,
+} from './types';
 
 const isYou = (n: string) => n.toLowerCase() === 'you';
 const subject = (n: string) => (isYou(n) ? 'you' : n);
@@ -25,6 +27,13 @@ export function describeProposal(p: Proposal, name: (id: string) => string, expe
     case 'void': {
       void (p.payload as VoidPayload);
       return `Cancel ${expenseLabel ? `“${expenseLabel}”` : 'an expense'}${p.note ? `: ${p.note}` : ''}`;
+    }
+    case 'claim': {
+      const c = p.payload as ClaimPayload;
+      if (c.direction === 'get') {
+        return capitalise(`${subject(name(c.creditor))} is supposed to get ${formatTaka(c.amount)} from ${subject(name(c.debtor))}`);
+      }
+      return capitalise(`${subject(name(c.debtor))} needs to give ${subject(name(c.creditor))} ${formatTaka(c.amount)}`);
     }
   }
 }

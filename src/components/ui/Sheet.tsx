@@ -44,10 +44,10 @@ export function Sheet({ open, onClose, title, children, footer }: {
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal aria-labelledby={id}>
       <button className="absolute inset-0 animate-fade-in bg-slate-950/40" aria-label="Close" tabIndex={-1} onClick={onClose} />
       <div ref={panel} tabIndex={-1}
-           className="relative flex max-h-[88dvh] w-full max-w-app animate-sheet-in flex-col rounded-t-3xl border border-night-line bg-night text-cream shadow-float outline-none sm:rounded-3xl">
+           className="relative flex max-h-[88dvh] w-full max-w-app animate-sheet-in flex-col rounded-t-3xl border border-night-line bg-night text-ink shadow-float outline-none sm:rounded-3xl">
         <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-night-line sm:hidden" aria-hidden />
         <div className="flex shrink-0 items-center gap-2 px-5 pb-2 pt-3 sm:pt-5">
-          <h2 id={id} className="min-w-0 flex-1 font-display text-lg font-semibold text-paper">{title}</h2>
+          <h2 id={id} className="min-w-0 flex-1 font-display text-lg font-semibold text-ink">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-1 h-10 w-10"><X size={20} /></IconButton>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-1">{children}</div>
@@ -72,7 +72,7 @@ export function InfoSheet({ title, children, label = 'More about this', classNam
       </IconButton>
       <Sheet open={open} onClose={() => setOpen(false)} title={title}
              footer={<Button block variant="secondary" onClick={() => setOpen(false)}>Got it</Button>}>
-        <div className="space-y-3 text-[15px] leading-relaxed text-cream/70">{children}</div>
+        <div className="space-y-3 text-[15px] leading-relaxed text-ink-soft">{children}</div>
       </Sheet>
     </>
   );
@@ -104,12 +104,12 @@ export function MoreMenu({ items, title = 'Options', label = 'More options', 'da
             const Icon = item.icon;
             const inner = (
               <>
-                {Icon && <Icon size={20} className={item.tone === 'danger' ? 'text-owe' : 'text-cream/55'} aria-hidden />}
+                {Icon && <Icon size={20} className={item.tone === 'danger' ? 'text-owe' : 'text-ink-soft'} aria-hidden />}
                 <span className="min-w-0 flex-1">
-                  <span className={cn('block text-[16px] font-medium', item.tone === 'danger' ? 'text-owe' : 'text-paper')}>{item.label}</span>
-                  {item.hint && <span className="block text-[13px] text-cream/45">{item.hint}</span>}
+                  <span className={cn('block text-[16px] font-medium', item.tone === 'danger' ? 'text-owe' : 'text-ink')}>{item.label}</span>
+                  {item.hint && <span className="block text-[13px] text-ink-soft">{item.hint}</span>}
                 </span>
-                {item.to && <ChevronRight size={18} className="text-cream/30" aria-hidden />}
+                {item.to && <ChevronRight size={18} className="text-ink-soft/40" aria-hidden />}
               </>
             );
             const cls = 'flex min-h-[52px] w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-night-elev';

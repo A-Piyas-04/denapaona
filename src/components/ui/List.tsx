@@ -10,7 +10,7 @@ export function Section({ title, action, children, className }: {
     <section className={className}>
       {(title || action) && (
         <div className="mb-2.5 flex min-h-[28px] items-center justify-between gap-3 px-1">
-          {title && <h2 className="font-display text-[15px] font-semibold tracking-tight text-cream/90">{title}</h2>}
+          {title && <h2 className="font-display text-[15px] font-semibold tracking-tight text-ink">{title}</h2>}
           {action}
         </div>
       )}
@@ -21,7 +21,7 @@ export function Section({ title, action, children, className }: {
 
 export function ListGroup({ children, className, ...rest }: { children: ReactNode; className?: string } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('overflow-hidden rounded-2xl border border-paper-muted/40 bg-paper text-ink shadow-soft divide-y divide-paper-muted/80', className)} {...rest}>
+    <div className={cn('overflow-hidden rounded-2xl border border-night-line/70 bg-paper text-ink shadow-soft divide-y divide-night-line/60', className)} {...rest}>
       {children}
     </div>
   );
@@ -57,7 +57,7 @@ export function ListRow({ leading, title, subtitle, trailing, to, onClick, chevr
   );
   const cls = cn(
     'flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left',
-    (to || onClick) && 'transition-colors active:bg-paper-muted/70 hover:bg-paper-muted/40',
+    (to || onClick) && 'transition-colors active:bg-night-elev hover:bg-night-elev/70',
     className,
   );
   if (to) return <Link to={to} className={cls} {...rest}>{body}</Link>;

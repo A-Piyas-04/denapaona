@@ -2,7 +2,7 @@ import { forwardRef, type InputHTMLAttributes, type ReactNode, type TextareaHTML
 import { cn } from '@/lib/format';
 
 const FIELD = cn(
-  'w-full rounded-xl border border-paper-muted bg-paper px-3.5 text-[16px] text-ink',
+  'w-full rounded-xl border border-night-line bg-night-elev px-3.5 text-[16px] text-ink',
   'placeholder:text-ink-soft/50 transition-[border-color,box-shadow] duration-150',
   'focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/25',
 );
@@ -25,10 +25,10 @@ export function Field({ label, hint, error, children, htmlFor, srLabel }: {
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className={srLabel ? 'sr-only' : 'block text-sm font-medium text-cream/75'}>{label}</label>
+      <label htmlFor={htmlFor} className={srLabel ? 'sr-only' : 'block text-sm font-medium text-ink-soft'}>{label}</label>
       {children}
-      {error ? <p className="text-[13px] text-[#FF8A75]" role="alert">{error}</p>
-        : hint ? <p className="text-[13px] text-cream/45">{hint}</p> : null}
+      {error ? <p className="text-[13px] text-owe" role="alert">{error}</p>
+        : hint ? <p className="text-[13px] text-ink-soft/80">{hint}</p> : null}
     </div>
   );
 }

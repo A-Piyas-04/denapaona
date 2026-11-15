@@ -21,15 +21,15 @@ import { useT } from '@/lib/i18n';
 import { sum } from '@/lib/money';
 import { cn } from '@/lib/format';
 
-const TABS = ['balances', 'activity', 'members'] as const;
+const TABS = ['activity', 'members', 'balances'] as const;
 
-/** Group dashboard — balances first, then activity and members. */
+/** Outing group — expenses feed the global Home ledger. */
 export function GroupDashboard() {
   const { id: groupId = '' } = useParams();
   const me = useMe();
   const t = useT();
   const [params] = useSearchParams();
-  const [tab, setTab] = useTabParam('tab', 'balances', TABS);
+  const [tab, setTab] = useTabParam('tab', 'activity', TABS);
   const [inviting, setInviting] = useState(false);
   useRealtimeGroup(groupId);
 
@@ -101,41 +101,51 @@ export function GroupDashboard() {
         </div>
       )}
 
-      {pairs && pairs.length > 0 && (
-        <div
-          className="rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft"
-          data-tour="balance-summary"
-        >
-          <p className="text-[13px] font-medium text-ink-soft">
-            {net > 0 ? t('balance.youAreSupposedToGet') : net < 0 ? t('balance.youNeedToGive') : t('balance.allSettled')}
-          </p>
-          <p className={cn(
-            'mt-1 font-display text-[34px] font-semibold leading-none tracking-tight tnum',
-            net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-ink-soft/40',
-          )}>
-            {net === 0 ? '—' : <Taka poisha={Math.abs(net)} />}
-          </p>
-        </div>
-      )}
+      <Banner tone="brand" icon={Sparkles} to="/home">
+        Balances live on Home — outing expenses still update your global ledger.
+      </Banner>
 
       {showInvite && <InviteCard groupName={group.data!.name} code={group.data!.invite_code} />}
 
       <div>
         <Tabs label="Group sections" value={tab} onChange={setTab} className="mb-4" items={[
-          { id: 'balances', label: 'Balances' },
           { id: 'activity', label: 'Activity' },
           { id: 'members', label: 'Members', count: members.data?.length },
+          { id: 'balances', label: 'Outing slice' },
         ]} />
 
         {tab === 'balances' && (
-          <BalanceBreakdown
-            groupId={groupId}
-            me={me}
-            pairs={pairs}
-            people={people}
-            owes={owes}
-            loading={pairwise.isLoading || allPairs.isLoading || members.isLoading}
-          />
+          <div className="space-y-4">
+            <p className="text-[13px] text-ink-soft">
+              Pairwise amounts from expenses in this outing only. Your full totals are on{' '}
+              <TextLink to="/home">Home</TextLink>.
+            </p>
+            {pairs && pairs.length > 0 && (
+              <div
+                className="rounded-3xl border border-night-line/70 bg-paper px-5 py-5 text-ink shadow-soft"
+                data-tour="balance-summary"
+              >
+                <p className="text-[13px] font-medium text-ink-soft">
+                  {net > 0 ? t('balance.youAreSupposedToGet') : net < 0 ? t('balance.youNeedToGive') : t('balance.allSettled')}
+                  {' '}(this outing)
+                </p>
+                <p className={cn(
+                  'mt-1 font-display text-[34px] font-semibold leading-none tracking-tight tnum',
+                  net > 0 ? 'text-owed' : net < 0 ? 'text-owe' : 'text-ink-soft/40',
+                )}>
+                  {net === 0 ? '—' : <Taka poisha={Math.abs(net)} />}
+                </p>
+              </div>
+            )}
+            <BalanceBreakdown
+              groupId={groupId}
+              me={me}
+              pairs={pairs}
+              people={people}
+              owes={owes}
+              loading={pairwise.isLoading || allPairs.isLoading || members.isLoading}
+            />
+          </div>
         )}
 
         {tab === 'activity' && (

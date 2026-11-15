@@ -13,7 +13,7 @@ export function AuthCallback() {
   const { userId, loading } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
-    if (!loading && userId) navigate(takeReturnTo() ?? '/groups', { replace: true });
+    if (!loading && userId) navigate(takeReturnTo() ?? '/home', { replace: true });
   }, [loading, userId, navigate]);
   // getSession() resolves only after supabase-js has processed the URL, so no
   // session at this point means the sign-in was cancelled or failed.

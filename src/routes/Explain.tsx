@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ListOrdered } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { DerivationView } from '@/components/DerivationView';
@@ -9,33 +10,50 @@ import { useToast } from '@/components/Toast';
 import { useMe } from '@/hooks/useAuth';
 import { useNames } from '@/hooks/useGroups';
 import { useExplain } from '@/hooks/useExplain';
+import { supabase } from '@/lib/supabase';
 import { rpc } from '@/lib/rpc';
-import { errorMessage } from '@/lib/errors';
+import { errorMessage, toAppError } from '@/lib/errors';
+import { FORMER_MEMBER } from '@/lib/format';
 import { formatTaka, isPartialTakaInput, parseTakaToPoisha } from '@/lib/money';
 
 /**
- * Pair history — stories E-01, E-02, plus settle all (F-05) and propose a
- * correction (C-07).
+ * Pair history. Global when opened from Home (`/explain/:otherId`);
+ * outing-scoped when opened as `/explain/:groupId/:otherId`.
  */
 export function Explain() {
-  const { groupId = '', otherId = '' } = useParams();
+  const params = useParams();
+  // Two-segment route sets both; one-segment sets only otherId.
+  const groupId = params.groupId;
+  const otherId = params.otherId ?? '';
   const me = useMe();
-  const { name } = useNames(groupId);
+  const groupNames = useNames(groupId ?? '');
+  const profileName = useQuery({
+    queryKey: ['profileName', otherId],
+    enabled: !groupId && !!otherId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('display_name').eq('id', otherId).maybeSingle();
+      if (error) throw toAppError(error);
+      return data?.display_name ?? FORMER_MEMBER;
+    },
+  });
   const explain = useExplain(groupId, otherId);
-  const other = name(otherId);
+  const other = groupId ? groupNames.name(otherId) : (profileName.data ?? '…');
   const navigate = useNavigate();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [correcting, setCorrecting] = useState(false);
 
-  const final = explain.data?.expected ?? 0; // + they owe me
+  const final = explain.data?.expected ?? 0;
 
   async function settleAll() {
     setBusy(true);
     try {
       const debtor = final < 0 ? me : otherId;
       const creditor = final < 0 ? otherId : me;
-      const id = await rpc.proposeSettlement({ groupId, debtor, creditor, amount: Math.abs(final) });
+      const amount = Math.abs(final);
+      const id = groupId
+        ? await rpc.proposeSettlement({ groupId, debtor, creditor, amount })
+        : await rpc.proposeSettlementGlobal({ debtor, creditor, amount });
       toast(final < 0 ? `Sent. ${other} confirms they got it.` : `Sent. ${other} confirms they paid.`);
       navigate(`/proposals/${id}`);
     } catch (e) { toast(errorMessage(e), 'error'); }
@@ -43,11 +61,10 @@ export function Explain() {
   }
 
   return (
-    <AppShell title={`You and ${other}`} back>
+    <AppShell title={`You and ${other}`} back={groupId ? true : '/home'}>
       {explain.isLoading ? <ScreenSkeleton variant="detail" /> : explain.error ? <ErrorState error={explain.error} onRetry={() => explain.refetch()} /> : explain.data && (
         <>
           {!explain.data.consistent && (
-            // Invariant I6, made visible.  This can only mean an engine bug — never hidden (E-01#2).
             <div className="flex items-start gap-3 rounded-2xl bg-owe p-4 text-[15px] text-white" role="alert">
               <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden />
               <p><strong>Something’s wrong.</strong> The steps add up to {formatTaka(explain.data.final)}, but the
@@ -66,7 +83,9 @@ export function Explain() {
                     {final < 0 ? `Settle ${formatTaka(-final)}` : `${other} gave me`}
                   </Button>
                 )}
-                <Button size="sm" variant="secondary" onClick={() => setCorrecting(true)}>Propose a correction</Button>
+                {groupId && (
+                  <Button size="sm" variant="secondary" onClick={() => setCorrecting(true)}>Propose a correction</Button>
+                )}
               </div>
             }
           />
@@ -75,21 +94,19 @@ export function Explain() {
             {explain.data.rows.length === 0 ? (
               <EmptyState icon={ListOrdered} title="Nothing between you two yet" />
             ) : (
-              <DerivationView rows={explain.data.rows} groupId={groupId} otherName={other} />
+              <DerivationView rows={explain.data.rows} groupId={groupId ?? ''} otherName={other} />
             )}
           </Section>
-          <CorrectionSheet open={correcting} onClose={() => setCorrecting(false)} groupId={groupId}
-                           me={me} otherId={otherId} other={other} current={final} />
+          {groupId && (
+            <CorrectionSheet open={correcting} onClose={() => setCorrecting(false)} groupId={groupId}
+                             me={me} otherId={otherId} other={other} current={final} />
+          )}
         </>
       )}
     </AppShell>
   );
 }
 
-/**
- * Story C-07.  The other person must approve; nothing changes until they do,
- * and the change is a new compensating entry — never an edit.
- */
 function CorrectionSheet({ open, onClose, groupId, me, otherId, other, current }: {
   open: boolean; onClose: () => void; groupId: string; me: string; otherId: string; other: string; current: number;
 }) {
@@ -105,9 +122,6 @@ function CorrectionSheet({ open, onClose, groupId, me, otherId, other, current }
 
   async function send() {
     if (delta === 0 || !reason.trim()) return;
-    // Express the change as one agreed amendment.  Prefer a "decrease" when it
-    // reduces an existing debt (the server re-validates it at commit), and an
-    // "increase" in the right direction otherwise.
     const args =
       delta < 0 && current > 0 && -delta <= current ? { fromUser: otherId, toUser: me, amount: -delta, direction: 'decrease' as const }
       : delta > 0 && current < 0 && delta <= -current ? { fromUser: me, toUser: otherId, amount: delta, direction: 'decrease' as const }

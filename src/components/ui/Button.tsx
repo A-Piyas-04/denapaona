@@ -6,11 +6,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand text-brand-fg shadow-gold hover:bg-brand-hover disabled:bg-night-elev disabled:text-cream/35 disabled:shadow-none',
-  secondary: 'bg-night-elev text-cream hover:bg-night-line disabled:text-cream/35',
-  outline: 'border border-night-line bg-transparent text-paper hover:bg-night-elev disabled:text-cream/35',
-  ghost: 'text-cream/80 hover:bg-night-elev disabled:text-cream/35',
-  danger: 'bg-owe text-white hover:bg-red-700 disabled:bg-night-elev disabled:text-cream/35',
+  primary: 'bg-brand text-brand-fg shadow-gold hover:bg-brand-hover disabled:bg-night-elev disabled:text-ink-soft disabled:shadow-none',
+  secondary: 'bg-night-elev text-ink hover:bg-night-line disabled:text-ink-soft',
+  outline: 'border border-night-line bg-transparent text-ink hover:bg-night-elev disabled:text-ink-soft',
+  ghost: 'text-ink hover:bg-night-elev disabled:text-ink-soft',
+  danger: 'bg-owe text-white hover:bg-red-700 disabled:bg-night-elev disabled:text-ink-soft',
 };
 const SIZES: Record<Size, string> = {
   sm: 'h-9 min-h-[36px] px-3.5 text-sm',
@@ -65,7 +65,7 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
         'pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
         tone === 'brand'
           ? 'bg-brand text-brand-fg shadow-gold hover:bg-brand-hover'
-          : 'text-cream/80 hover:bg-night-elev hover:text-paper',
+          : 'text-ink-soft hover:bg-night-elev hover:text-ink',
         className,
       )}
       {...rest}

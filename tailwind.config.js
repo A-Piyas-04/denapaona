@@ -1,28 +1,47 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {
-        // Warm night ledger + mustard gold (দেনা পাওনা)
-        canvas: '#12100E',
-        night: { DEFAULT: '#1C1814', elev: '#26211C', line: '#3A342C' },
-        paper: { DEFAULT: '#FFF8EE', muted: '#F3EBD9' },
-        ink: { DEFAULT: '#1A1510', soft: '#5C5348' },
-        cream: '#F3E6C8',
-        brand: {
-          DEFAULT: '#F0B429',
-          hover: '#DFA010',
-          fg: '#1A1510',
-          soft: '#F8E9C0',
-          ink: '#8A6410',
-          muted: '#3A3018',
+        // Semantic tokens → CSS variables (swap with .light / .dark)
+        canvas: 'rgb(var(--canvas) / <alpha-value>)',
+        night: {
+          DEFAULT: 'rgb(var(--night) / <alpha-value>)',
+          elev: 'rgb(var(--night-elev) / <alpha-value>)',
+          line: 'rgb(var(--night-line) / <alpha-value>)',
         },
-        // Give / get — readable on paper cards
-        owe: { DEFAULT: '#D94B32', soft: '#FCE8E2' },
-        owed: { DEFAULT: '#2F8F5B', soft: '#E2F4EA' },
-        pending: { DEFAULT: '#C4891A', soft: '#F8ECD0' },
+        paper: {
+          DEFAULT: 'rgb(var(--paper) / <alpha-value>)',
+          muted: 'rgb(var(--paper-muted) / <alpha-value>)',
+        },
+        ink: {
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          soft: 'rgb(var(--ink-soft) / <alpha-value>)',
+        },
+        cream: 'rgb(var(--cream) / <alpha-value>)',
+        brand: {
+          DEFAULT: 'rgb(var(--brand) / <alpha-value>)',
+          hover: 'rgb(var(--brand-hover) / <alpha-value>)',
+          fg: 'rgb(var(--brand-fg) / <alpha-value>)',
+          soft: 'rgb(var(--brand-soft) / <alpha-value>)',
+          ink: 'rgb(var(--brand-ink) / <alpha-value>)',
+          muted: 'rgb(var(--brand-muted) / <alpha-value>)',
+        },
+        owe: {
+          DEFAULT: 'rgb(var(--owe) / <alpha-value>)',
+          soft: 'rgb(var(--owe-soft) / <alpha-value>)',
+        },
+        owed: {
+          DEFAULT: 'rgb(var(--owed) / <alpha-value>)',
+          soft: 'rgb(var(--owed-soft) / <alpha-value>)',
+        },
+        pending: {
+          DEFAULT: 'rgb(var(--pending) / <alpha-value>)',
+          soft: 'rgb(var(--pending-soft) / <alpha-value>)',
+        },
       },
       fontFamily: {
         sans: ['Figtree', '"Hind Siliguri"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
@@ -31,11 +50,11 @@ export default {
       },
       maxWidth: { app: '28rem' },
       boxShadow: {
-        float: '0 14px 36px -12px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(240, 180, 41, 0.12)',
-        nav: '0 -1px 0 rgba(255, 248, 238, 0.06), 0 -12px 32px -16px rgba(0, 0, 0, 0.55)',
-        soft: '0 1px 2px rgba(26, 21, 16, 0.06), 0 8px 24px -10px rgba(26, 21, 16, 0.14)',
-        header: '0 1px 0 rgba(255, 248, 238, 0.06)',
-        gold: '0 8px 24px -8px rgba(240, 180, 41, 0.45)',
+        float: 'var(--shadow-float)',
+        nav: 'var(--shadow-nav)',
+        soft: 'var(--shadow-soft)',
+        header: 'var(--shadow-header)',
+        gold: 'var(--shadow-gold)',
       },
       transitionTimingFunction: {
         out: 'cubic-bezier(0.23, 1, 0.32, 1)',

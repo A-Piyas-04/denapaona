@@ -18,24 +18,24 @@ export function Landing() {
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
   if (loading) return <AuthSplash />;
-  if (userId) return <Navigate to="/groups" replace />;
+  if (userId) return <Navigate to="/home" replace />;
   const joining = from?.startsWith('/join');
 
   return (
     <div className="app-frame safe-top safe-bottom px-6 pb-8 pt-12">
       <div className="flex flex-1 flex-col animate-page-enter">
         <BrandLockup size="lg" showRoman />
-        <p className="mt-6 max-w-[20rem] text-[17px] leading-relaxed text-cream/65">{t('app.tagline')}</p>
+        <p className="mt-6 max-w-[20rem] text-[17px] leading-relaxed text-ink-soft">{t('app.tagline')}</p>
 
         <ul className="mt-10 space-y-4">
           {FEATURES.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="flex gap-3.5 rounded-2xl border border-night-line/80 bg-night/80 px-3.5 py-3.5">
+            <li key={title} className="flex gap-3.5 rounded-2xl border border-night-line bg-paper px-3.5 py-3.5 shadow-soft">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-muted text-brand" aria-hidden>
                 <Icon size={22} strokeWidth={1.9} />
               </span>
               <div className="min-w-0 pt-0.5">
-                <p className="text-[16px] font-semibold text-paper">{title}</p>
-                <p className="mt-0.5 text-[15px] leading-snug text-cream/50">{body}</p>
+                <p className="text-[16px] font-semibold text-ink">{title}</p>
+                <p className="mt-0.5 text-[15px] leading-snug text-ink-soft">{body}</p>
               </div>
             </li>
           ))}
@@ -57,7 +57,7 @@ export function Landing() {
           <GoogleGlyph />
           {t('auth.google')}
         </Button>
-        <p className="text-center text-[13px] leading-relaxed text-cream/40">
+        <p className="text-center text-[13px] leading-relaxed text-ink-soft/80">
           Tracks who should give and get. Never moves money.
         </p>
       </div>

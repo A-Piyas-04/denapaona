@@ -30,7 +30,7 @@ export function ProposalDetail() {
   const me = useMe();
   const proposal = useProposal(id);
   const p = proposal.data;
-  useRealtimeGroup(p?.group_id);
+  useRealtimeGroup(p?.group_id ?? undefined);
   const pairs = useAllPairs(p?.group_id ?? '');
   const voidExpense = useExpense(p?.type === 'void' ? (p.payload as VoidPayload).expense_id : '');
   const ids = p ? [p.proposer_id, ...(p.proposal_participants ?? []).map((x) => x.user_id)] : [];
@@ -79,12 +79,22 @@ export function ProposalDetail() {
   }
 
   return (
-    <AppShell title={{ transfer: 'Debt transfer', settlement: 'Payment', amendment: 'Correction', void: 'Cancel an expense' }[p.type]} back>
+    <AppShell title={{
+      transfer: 'Debt transfer',
+      settlement: 'Payment',
+      amendment: 'Correction',
+      void: 'Cancel an expense',
+      claim: 'Recorded balance',
+    }[p.type]} back>
       <div className="rounded-3xl border border-slate-200/80 bg-white px-5 py-5">
         <div className="flex items-center gap-3">
           <IconTile tone="brand"><TypeIcon size={20} /></IconTile>
           <div className="min-w-0 text-[13px] text-slate-500">
-            <Link to={`/groups/${p.group_id}`} className="block truncate font-semibold text-slate-700 hover:underline">{p.groups.name}</Link>
+            {p.group_id && p.groups ? (
+              <Link to={`/groups/${p.group_id}`} className="block truncate font-semibold text-slate-700 hover:underline">{p.groups.name}</Link>
+            ) : (
+              <span className="block truncate font-semibold text-slate-700">Home ledger</span>
+            )}
             From {name(p.proposer_id, { you: true })}, {dateTime(p.created_at)}
           </div>
         </div>
@@ -94,7 +104,7 @@ export function ProposalDetail() {
         {p.note && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[15px] text-slate-700">“{p.note}”</p>}
       </div>
 
-      {pending && pairs.data && (
+      {pending && p.group_id && pairs.data && (
         <Impact p={p} me={me} owes={pairs.data.owes} name={(x) => name(x, { you: true })} realName={(x) => name(x)} expense={voidExpense.data} />
       )}
 

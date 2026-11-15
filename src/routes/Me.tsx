@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Compass, Languages, LogOut, UserRound } from 'lucide-react';
+import { Bell, Compass, Languages, LogOut, Moon, Sun, UserRound } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Avatar, Button, Field, IconTile, Input, ListGroup, ListRow, Section, Segmented, Sheet, Skeleton } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { useAuth, useMe } from '@/hooks/useAuth';
+import { useTheme, type Theme } from '@/hooks/useTheme';
 import { useTour } from '@/tour/TourProvider';
 import { supabase } from '@/lib/supabase';
 import { errorMessage } from '@/lib/errors';
 import { useI18n, type Lang } from '@/lib/i18n';
 import type { Profile } from '@/lib/types';
 
-type Open = null | 'name' | 'language' | 'notifications' | 'signout';
+type Open = null | 'name' | 'language' | 'theme' | 'notifications' | 'signout';
 
 export function Me() {
   const me = useMe();
   const { signOut } = useAuth();
   const { lang, setLang, t } = useI18n();
+  const { theme, setTheme } = useTheme();
   const tour = useTour();
   const [open, setOpen] = useState<Open>(null);
   const profile = useQuery({
@@ -32,7 +34,7 @@ export function Me() {
   return (
     <AppShell title={t('nav.me')}>
       {profile.data ? (
-        <div className="flex items-center gap-4 rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft">
+        <div className="flex items-center gap-4 rounded-3xl border border-night-line/60 bg-paper px-5 py-5 text-ink shadow-soft">
           <Avatar name={profile.data.display_name} url={profile.data.avatar_url} seed={me} size={60} />
           <div className="min-w-0">
             <p className="truncate font-display text-[20px] font-semibold text-ink">{profile.data.display_name}</p>
@@ -40,11 +42,11 @@ export function Me() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4 rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 shadow-soft" aria-busy>
-          <Skeleton className="h-[60px] w-[60px] rounded-full !from-paper-muted !via-paper !to-paper-muted" />
+        <div className="flex items-center gap-4 rounded-3xl border border-night-line/60 bg-paper px-5 py-5 shadow-soft" aria-busy>
+          <Skeleton className="h-[60px] w-[60px] rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-5 w-32 !from-paper-muted !via-paper !to-paper-muted" />
-            <Skeleton className="h-4 w-44 !from-paper-muted !via-paper !to-paper-muted" />
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-44" />
           </div>
         </div>
       )}
@@ -52,9 +54,16 @@ export function Me() {
       <Section title={t('me.account')}>
         <ListGroup>
           <ListRow onClick={() => setOpen('name')} chevron leading={<IconTile><UserRound size={20} /></IconTile>}
-                   title={t('me.name')} trailing={<span className="text-[15px] text-slate-500">{profile.data?.display_name}</span>} />
+                   title={t('me.name')} trailing={<span className="text-[15px] text-ink-soft">{profile.data?.display_name}</span>} />
           <ListRow onClick={() => setOpen('language')} chevron leading={<IconTile><Languages size={20} /></IconTile>}
-                   title={t('me.language')} trailing={<span className="text-[15px] text-slate-500">{lang === 'bn' ? 'বাংলা' : 'English'}</span>} />
+                   title={t('me.language')} trailing={<span className="text-[15px] text-ink-soft">{lang === 'bn' ? 'বাংলা' : 'English'}</span>} />
+          <ListRow
+            onClick={() => setOpen('theme')}
+            chevron
+            leading={<IconTile tone="brand">{theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}</IconTile>}
+            title={t('me.theme')}
+            trailing={<span className="text-[15px] text-ink-soft">{theme === 'dark' ? t('me.theme.dark') : t('me.theme.light')}</span>}
+          />
         </ListGroup>
       </Section>
 
@@ -77,12 +86,26 @@ export function Me() {
              footer={<Button block onClick={close}>Done</Button>}>
         <Segmented<Lang> label="Language" value={lang} onChange={setLang}
                          options={[{ value: 'en', label: 'English' }, { value: 'bn', label: 'বাংলা' }]} />
-        <p className="mt-3 text-[13px] text-slate-500">Bangla covers the main screens. The rest stays in English.</p>
+        <p className="mt-3 text-[13px] text-ink-soft">Bangla covers the main screens. The rest stays in English.</p>
+      </Sheet>
+
+      <Sheet open={open === 'theme'} onClose={close} title={t('me.theme')}
+             footer={<Button block onClick={close}>Done</Button>}>
+        <Segmented<Theme>
+          label={t('me.theme')}
+          value={theme}
+          onChange={setTheme}
+          options={[
+            { value: 'light', label: t('me.theme.light') },
+            { value: 'dark', label: t('me.theme.dark') },
+          ]}
+        />
+        <p className="mt-3 text-[13px] text-ink-soft">Light and dark each use one surface family — no mixed cards.</p>
       </Sheet>
 
       <Sheet open={open === 'notifications'} onClose={close} title={t('me.notifications')}
              footer={<Button block variant="secondary" onClick={close}>Got it</Button>}>
-        <div className="space-y-3 text-[15px] leading-relaxed text-slate-700">
+        <div className="space-y-3 text-[15px] leading-relaxed text-ink-soft">
           <p>The Inbox badge shows what needs your decision. Each group shows what changed since your last visit.</p>
           <p>Push and email notifications aren’t on yet. On iPhone, push will need “Add to Home Screen” first.</p>
         </div>
@@ -95,7 +118,7 @@ export function Me() {
                  <Button variant="danger" onClick={signOut}>Sign out</Button>
                </div>
              }>
-        <p className="text-[15px] text-slate-700">Your groups and balances stay as they are.</p>
+        <p className="text-[15px] text-ink-soft">Your groups and balances stay as they are.</p>
       </Sheet>
     </AppShell>
   );
@@ -112,7 +135,6 @@ function NameSheet({ open, onClose, me, current }: { open: boolean; onClose: () 
       <form className="space-y-5" onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
-        // profiles_update_own: a user may rename only themselves (§12.4).
         const { error } = await supabase.from('profiles').update({ display_name: name.trim() }).eq('id', me);
         setBusy(false);
         if (error) toast(errorMessage(error), 'error');

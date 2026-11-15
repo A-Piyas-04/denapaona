@@ -4,7 +4,7 @@ import { toAppError } from '@/lib/errors';
 import type { Group, Proposal } from '@/lib/types';
 import { useMe } from './useAuth';
 
-export type InboxItem = Proposal & { groups: Pick<Group, 'id' | 'name'> };
+export type InboxItem = Proposal & { groups: Pick<Group, 'id' | 'name'> | null };
 
 /**
  * Story C-04: proposals awaiting MY decision.  This count is the inbox badge —

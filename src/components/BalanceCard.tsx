@@ -16,14 +16,16 @@ export interface PairBalance {
   poisha: number;
 }
 
-const historyPath = (groupId: string, otherId: string) => `/explain/${groupId}/${otherId}`;
+const historyPath = (groupId: string | undefined, otherId: string) =>
+  groupId ? `/explain/${groupId}/${otherId}` : `/explain/${otherId}`;
 
 /**
  * Per-person rows in two plain sections: "You need to give" and "You're
  * supposed to get".  Each row has History, Settle up, and Transfer.
+ * Omit `groupId` for the global Home ledger.
  */
 export function BalanceBreakdown({ groupId, me, pairs, people, owes, loading }: {
-  groupId: string;
+  groupId?: string;
   me: string;
   pairs: PairBalance[] | undefined;
   people: { id: string; name: string }[];
@@ -108,7 +110,7 @@ export function BalanceBreakdown({ groupId, me, pairs, people, owes, loading }: 
 function RowAction({ label, icon: Icon, to, onClick }: {
   label: string; icon: typeof HistoryIcon; to?: string; onClick?: () => void;
 }) {
-  const cls = 'pressable inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-paper-muted px-2 text-[13px] font-semibold text-ink hover:bg-brand-soft hover:text-brand-ink';
+  const cls = 'pressable inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-night-elev px-2 text-[13px] font-semibold text-ink hover:bg-brand-soft hover:text-brand-ink';
   if (to) {
     return (
       <Link to={to} className={cls} onClick={(e) => e.stopPropagation()}>

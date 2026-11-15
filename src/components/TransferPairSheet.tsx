@@ -21,7 +21,7 @@ import { cn } from '@/lib/format';
  */
 export function TransferPairSheet({ open, onClose, groupId, me, otherId, otherName, poisha, people, owes }: {
   open: boolean; onClose: () => void;
-  groupId: string; me: string; otherId: string; otherName: string; poisha: number;
+  groupId?: string; me: string; otherId: string; otherName: string; poisha: number;
   people: { id: string; name: string }[];
   owes: (a: string, b: string) => number;
 }) {
@@ -80,15 +80,19 @@ export function TransferPairSheet({ open, onClose, groupId, me, otherId, otherNa
     if (!valid) return;
     setBusy(true); setError(null);
     try {
-      const id = await rpc.proposeTransfer({ groupId, debtor, intermediary: me, creditor, amount });
+      const id = groupId
+        ? await rpc.proposeTransfer({ groupId, debtor: debtor!, intermediary: me, creditor: creditor!, amount })
+        : await rpc.proposeTransferGlobal({ debtor: debtor!, intermediary: me, creditor: creditor!, amount });
       toast(`Sent for approval to ${name(debtor)} and ${name(creditor)}`);
       void qc.invalidateQueries({ queryKey: ['sent'] });
-      void qc.invalidateQueries({ queryKey: ['groupPending', groupId] });
+      void qc.invalidateQueries({ queryKey: ['inbox'] });
+      void qc.invalidateQueries({ queryKey: ['globalPairs'] });
+      if (groupId) void qc.invalidateQueries({ queryKey: ['groupPending', groupId] });
       onClose();
       navigate(`/proposals/${id}`);
     } catch (e) {
       setError(errorMessage(e));
-      void qc.invalidateQueries({ queryKey: ['allPairs', groupId] });
+      if (groupId) void qc.invalidateQueries({ queryKey: ['allPairs', groupId] });
     } finally {
       setBusy(false);
     }

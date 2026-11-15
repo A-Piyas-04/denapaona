@@ -16,7 +16,7 @@ import { formatTaka, isPartialTakaInput, parseTakaToPoisha, poishaToInput } from
  */
 export function SettlePairSheet({ open, onClose, groupId, me, otherId, otherName, poisha }: {
   open: boolean; onClose: () => void;
-  groupId: string; me: string; otherId: string; otherName: string; poisha: number;
+  groupId?: string; me: string; otherId: string; otherName: string; poisha: number;
 }) {
   const t = useT();
   const navigate = useNavigate();
@@ -45,12 +45,16 @@ export function SettlePairSheet({ open, onClose, groupId, me, otherId, otherName
     const debtor = iShouldGive ? me : otherId;
     const creditor = iShouldGive ? otherId : me;
     try {
-      const id = await rpc.proposeSettlement({ groupId, debtor, creditor, amount });
+      const id = groupId
+        ? await rpc.proposeSettlement({ groupId, debtor, creditor, amount })
+        : await rpc.proposeSettlementGlobal({ debtor, creditor, amount });
       toast(iShouldGive
         ? `Sent. ${otherName} confirms they got it.`
         : `Sent. ${otherName} confirms they gave you this.`);
-      void qc.invalidateQueries({ queryKey: ['groupPending', groupId] });
+      if (groupId) void qc.invalidateQueries({ queryKey: ['groupPending', groupId] });
       void qc.invalidateQueries({ queryKey: ['sent'] });
+      void qc.invalidateQueries({ queryKey: ['inbox'] });
+      void qc.invalidateQueries({ queryKey: ['globalPairs'] });
       onClose();
       navigate(`/proposals/${id}`);
     } catch (e) {

@@ -49,7 +49,7 @@ export interface Expense {
 
 export interface LedgerEntry {
   id: UUID;
-  group_id: UUID;
+  group_id: UUID | null;
   from_user: UUID;
   to_user: UUID;
   amount_poisha: number;
@@ -58,7 +58,7 @@ export interface LedgerEntry {
   created_at: string;
 }
 
-export type ProposalType = 'transfer' | 'amendment' | 'settlement' | 'void';
+export type ProposalType = 'transfer' | 'amendment' | 'settlement' | 'void' | 'claim';
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'invalidated' | 'cancelled';
 export type Decision = 'pending' | 'approved' | 'rejected';
 
@@ -66,6 +66,12 @@ export interface TransferPayload { debtor: UUID; intermediary: UUID; creditor: U
 export interface AmendmentPayload { from_user: UUID; to_user: UUID; amount: number; direction: 'increase' | 'decrease' }
 export interface SettlementPayload { debtor: UUID; creditor: UUID; amount: number }
 export interface VoidPayload { expense_id: UUID }
+export interface ClaimPayload {
+  debtor: UUID;
+  creditor: UUID;
+  amount: number;
+  direction: 'get' | 'give';
+}
 
 export interface ProposalParticipant {
   proposal_id: UUID;
@@ -76,7 +82,7 @@ export interface ProposalParticipant {
 
 export interface Proposal {
   id: UUID;
-  group_id: UUID;
+  group_id: UUID | null;
   type: ProposalType;
   proposer_id: UUID;
   payload: TransferPayload | AmendmentPayload | SettlementPayload | VoidPayload;

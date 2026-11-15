@@ -8,6 +8,7 @@
  */
 import { supabase } from './supabase';
 import { AppError, toAppError } from './errors';
+// AppError used by previewClaimInvite
 import type { DerivationRow, UUID } from './types';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -100,6 +101,40 @@ export const rpc = {
   // ── explanation ──
   explainBalance: (groupId: UUID, otherId: UUID) =>
     call<DerivationRow[]>('explain_balance', { p_group_id: groupId, p_other: otherId }, { retry: true }),
+
+  // ── global ledger (Home) ──
+  netOwedGlobal: (debtor: UUID, creditor: UUID) =>
+    call<number>('net_owed_global', { p_debtor: debtor, p_creditor: creditor }, { retry: true }),
+  proposeClaim: (a: { otherId: UUID; direction: 'get' | 'give'; amount: number; note?: string }) =>
+    call<UUID>('propose_claim', {
+      p_other: a.otherId, p_direction: a.direction, p_amount: a.amount, p_note: a.note || null,
+    }),
+  createClaimInvite: (a: { direction: 'get' | 'give'; amount: number; note?: string }) =>
+    call<string>('create_claim_invite', {
+      p_direction: a.direction, p_amount: a.amount, p_note: a.note || null,
+    }),
+  previewClaimInvite: async (code: string) => {
+    const rows = await call<{
+      invite_id: UUID; proposer_id: UUID; proposer_name: string;
+      direction: 'get' | 'give'; amount_poisha: number; note: string | null; already_redeemed: boolean;
+    }[]>('preview_claim_invite', { p_code: code }, { retry: true });
+    if (!rows[0]) throw new AppError('INVALID_CLAIM_INVITE', 'This claim invite is no longer valid.');
+    return rows[0];
+  },
+  acceptClaimInvite: (code: string) => call<UUID>('accept_claim_invite', { p_code: code }),
+  proposeSettlementGlobal: (a: { debtor: UUID; creditor: UUID; amount: number; note?: string }) =>
+    call<UUID>('propose_settlement_global', {
+      p_debtor: a.debtor, p_creditor: a.creditor, p_amount: a.amount, p_note: a.note || null,
+    }),
+  proposeTransferGlobal: (a: {
+    debtor: UUID; intermediary: UUID; creditor: UUID; amount: number; note?: string;
+  }) =>
+    call<UUID>('propose_transfer_global', {
+      p_debtor: a.debtor, p_intermediary: a.intermediary, p_creditor: a.creditor,
+      p_amount: a.amount, p_note: a.note || null,
+    }),
+  explainBalanceGlobal: (otherId: UUID) =>
+    call<DerivationRow[]>('explain_balance_global', { p_other: otherId }, { retry: true }),
 };
 
 export function newClientToken(): UUID {

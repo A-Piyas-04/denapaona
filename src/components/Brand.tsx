@@ -15,21 +15,16 @@ export function LogoMark({ size = 40, className }: { size?: number; className?: 
   );
 }
 
-/**
- * Logo + Bangla wordmark. Brand is always দেনা পাওনা; romanization is optional support text.
- */
+/** Logo + Bangla wordmark. */
 export function BrandLockup({
   size = 'md',
   stacked = false,
   showRoman = false,
-  light = true,
   className,
 }: {
   size?: 'sm' | 'md' | 'lg';
   stacked?: boolean;
   showRoman?: boolean;
-  /** Light wordmark for dark chrome (default). */
-  light?: boolean;
   className?: string;
 }) {
   const t = useT();
@@ -46,17 +41,11 @@ export function BrandLockup({
     >
       <LogoMark size={mark} />
       <div className={cn('min-w-0', stacked && 'flex flex-col items-center')}>
-        <span
-          className={cn(
-            'font-display font-semibold leading-none tracking-tight',
-            bangla,
-            light ? 'text-paper' : 'text-ink',
-          )}
-        >
+        <span className={cn('font-display font-semibold leading-none tracking-tight text-ink', bangla)}>
           {t('app.name')}
         </span>
         {showRoman && (
-          <span className={cn('mt-1 block text-[13px] font-medium tracking-wide', light ? 'text-cream/55' : 'text-ink-soft')}>
+          <span className="mt-1 block text-[13px] font-medium tracking-wide text-ink-soft">
             {t('app.nameRoman')}
           </span>
         )}

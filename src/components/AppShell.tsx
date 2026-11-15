@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, CircleUserRound, Inbox as InboxIcon, Users, WifiOff } from 'lucide-react';
+import { ChevronLeft, CircleUserRound, Home, Inbox as InboxIcon, MapPinned, Users, WifiOff } from 'lucide-react';
 import { BrandLockup } from '@/components/Brand';
 import { PageEnter } from '@/components/motion';
 import { useInbox } from '@/hooks/useProposals';
@@ -9,8 +9,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/format';
 
 /**
- * Mobile-first frame (390px target). Dark chrome + paper content.
- * Root headers carry the দেনা পাওনা lockup; nested screens use back + title.
+ * Mobile-first frame. Chrome + cards share one theme family via CSS tokens.
  */
 export function AppShell({
   title,
@@ -48,7 +47,7 @@ export function AppShell({
               <div className="min-w-0 flex-1">
                 <BrandLockup size="sm" />
                 {title != null && title !== '' && title !== t('app.name') && (
-                  <p className="mt-0.5 truncate pl-[44px] text-[12px] font-medium text-cream/50">{title}</p>
+                  <p className="mt-0.5 truncate pl-[44px] text-[12px] font-medium text-ink-soft">{title}</p>
                 )}
               </div>
               {action && <div className="flex shrink-0 items-center gap-0.5">{action}</div>}
@@ -58,15 +57,15 @@ export function AppShell({
               <button
                 type="button"
                 onClick={() => (back === true ? navigate(-1) : navigate(back))}
-                className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-paper hover:bg-night-elev"
+                className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-night-elev"
                 aria-label="Back"
               >
                 <ChevronLeft size={24} aria-hidden />
               </button>
-              <h1 className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold text-paper">
+              <h1 className="min-w-0 flex-1 truncate font-display text-[17px] font-semibold text-ink">
                 {title}
               </h1>
-              {action && <div className="flex shrink-0 items-center gap-0.5 text-cream">{action}</div>}
+              {action && <div className="flex shrink-0 items-center gap-0.5 text-ink">{action}</div>}
             </div>
           )}
         </header>
@@ -107,12 +106,19 @@ function BottomNav() {
   const count = inbox.data?.length ?? 0;
   const items = [
     {
+      to: '/home',
+      label: t('nav.home'),
+      icon: Home,
+      tour: 'nav-home',
+      match: (p: string) => p === '/home' || p.startsWith('/explain/'),
+    },
+    {
       to: '/groups',
       label: t('nav.groups'),
       icon: Users,
       tour: 'nav-groups',
       match: (p: string) =>
-        p.startsWith('/groups') || p.startsWith('/join') || p.startsWith('/explain'),
+        p.startsWith('/groups') || p.startsWith('/join'),
     },
     {
       to: '/proposals',
@@ -120,7 +126,14 @@ function BottomNav() {
       icon: InboxIcon,
       tour: 'nav-inbox',
       badge: count,
-      match: (p: string) => p.startsWith('/proposals'),
+      match: (p: string) => p.startsWith('/proposals') || p.startsWith('/claim'),
+    },
+    {
+      to: '/tours',
+      label: t('nav.tours'),
+      icon: MapPinned,
+      tour: 'nav-tours',
+      match: (p: string) => p.startsWith('/tours'),
     },
     {
       to: '/me',
@@ -147,7 +160,7 @@ function BottomNav() {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'pressable relative flex h-[4.25rem] flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold',
-                active ? 'text-brand' : 'text-cream/45',
+                active ? 'text-brand' : 'text-ink-soft',
               )}
             >
               <span

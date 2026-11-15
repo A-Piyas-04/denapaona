@@ -39,7 +39,7 @@ export function Inbox() {
               : (
                 <div className="space-y-3">
                   {list.map((p, i) => (
-                    <ProposalCard key={p.id} proposal={p} groupName={p.groups.name} name={(id) => name(id)} me={me}
+                    <ProposalCard key={p.id} proposal={p} groupName={p.groups?.name} name={(id) => name(id)} me={me}
                                   data-tour={i === 0 ? 'proposal-card' : undefined} />
                   ))}
                 </div>
@@ -51,7 +51,7 @@ export function Inbox() {
               ? <EmptyState icon={Send} title="Nothing waiting on others" body="Requests you send appear here until everyone answers." />
               : (
                 <div className="space-y-3">
-                  {list.map((p) => <ProposalCard key={p.id} proposal={p} groupName={p.groups.name} name={(id) => name(id)} me={me} />)}
+                  {list.map((p) => <ProposalCard key={p.id} proposal={p} groupName={p.groups?.name} name={(id) => name(id)} me={me} />)}
                 </div>
               )}
           </Loadable>

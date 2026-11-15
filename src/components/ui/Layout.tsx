@@ -8,7 +8,7 @@ export function StatHero({ label, value, sub, action, tone = 'neutral', classNam
   tone?: 'neutral' | 'owe' | 'owed'; className?: string; 'data-tour'?: string;
 }) {
   return (
-    <div className={cn('rounded-3xl border border-paper-muted/40 bg-paper px-5 py-5 text-ink shadow-soft', className)} {...rest}>
+    <div className={cn('rounded-3xl border border-night-line/70 bg-paper px-5 py-5 text-ink shadow-soft', className)} {...rest}>
       <p className={cn('text-[14px] font-medium', tone === 'owe' ? 'text-owe' : tone === 'owed' ? 'text-owed' : 'text-ink-soft')}>{label}</p>
       <div className="mt-1 font-display text-[36px] font-semibold leading-tight tracking-tight text-ink tnum">{value}</div>
       {(sub || action) && (
@@ -32,7 +32,7 @@ export function ActionBar({ items, className, ...rest }: { items: ActionItem[]; 
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-night-line bg-night-elev text-brand transition-colors group-hover:border-brand/40">
               <Icon size={22} strokeWidth={1.9} aria-hidden />
             </span>
-            <span className="text-[12px] font-semibold text-cream/75">{label}</span>
+            <span className="text-[12px] font-semibold text-ink-soft">{label}</span>
           </>
         );
         const cls = 'group pressable flex flex-col items-center gap-1.5 rounded-2xl py-1';
@@ -70,7 +70,7 @@ export function Tabs<T extends string>({ value, onChange, items, label, classNam
             onClick={() => onChange(it.id)}
             className={cn(
               'pressable relative -mb-px inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 px-2 text-[14px] font-semibold transition-colors sm:flex-none sm:px-3 sm:text-[15px]',
-              active ? 'text-paper' : 'text-cream/45 hover:text-cream/80',
+              active ? 'text-ink' : 'text-ink-soft hover:text-ink',
             )}
           >
             <span className="truncate">{it.label}</span>
